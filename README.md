@@ -1,8 +1,8 @@
-# ChineseNER
+# NER
 
 
 ## 数据来源
-目前常用的、成熟的NER语料有：
+目前常用的、成熟的中文NER语料有：
 - 人民日报的语料 [B, I, O] * [PER, LOC, ORG]
 - MRSA微软亚洲研究院的语料 [B, I, O] * [PER, LOC, ORG]
 
