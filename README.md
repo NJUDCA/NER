@@ -60,10 +60,17 @@ BIESO (其他的字符角色定义还有很多)
 ## 模型选取
 NER通常被转换成分类任务，类别即我们根据特征定义的**字符角色和实体类别的排列组合**
 
-## CRF
+### CRF
 条件随机场，通常作为最后一层的标签推断层。
 
-### Bi-LSTM-CRF
+### BiLSTM-CRF
+
+LSTM的全称是Long Short-Term Memory，它是RNN（Recurrent Neural Network）的一种。
+
+LSTM由于其设计的特点，非常适合用于对时序数据的建模，如文本数据。
+
+BiLSTM是Bi-directional Long Short-Term Memory的缩写，是由前向LSTM与后向LSTM组合而成，常被用来建模上下文信息。
+
 1. 使用预训练字向量作为embedding层输入，否则，随机化初始字向量；
 2. 然后经过两个双向LSTM层进行编码，编码后加入dense全连接层；
 3. 最后送入CRF层进行序列标注。
