@@ -34,8 +34,7 @@ BIESO (其他的字符角色定义还有很多)
 - DISEASE 疾病实体
 - MEDICINE 药物实体
 
-所以在训练预料中，结合字符角色定义和实体类别定义，一个句子按照字符（word/char）可标注为：
-（*注意：每句话以空行分隔，即为一个序列*）
+所以在训练预料中，结合字符角色定义和实体类别定义，一个句子（一个句子即为一个序列，以换行符'\n'分隔）按照字符（word/char）可标注为：
 ```
 美 B-LOC
 国 I-LOC
@@ -92,9 +91,9 @@ BERT的特点在于：
 
 
 
-在这里，我们使用预训练的Bert中文模型作为embedding层，考虑到NER任务的特殊性，需要对分类模型`run_classifier.py`进行改造：
+在这里，我们使用预训练的Bert中文模型作为embedding层，考虑到NER任务的特殊性，需要对一般的分类模型进行改造：
 
-1. Google在`run_classifier.py`示例中的任务都是针对**句子对输入**（next sentence prediction,），而在NER任务中只有单个句子输入
+1. 在`run_classifier.py`示例中的任务都是针对**句子对输入**（next sentence prediction,），而在NER任务中只有单个句子输入
 
 2. 在`get_lables`里定义标签类别，视具体任务而定
 ```python
