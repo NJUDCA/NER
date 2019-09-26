@@ -84,17 +84,18 @@ BiLSTM是Bi-directional Long Short-Term Memory的缩写，是由前向LSTM与后
 
 BERT的特点在于：
 1. 预训练
+
 预训练模型的开销很大，Google提供了基于百科类语料的中文模型，另外有论文提出了基于高质量英文论文的[SCIBERT](https://github.com/allenai/scibert)
 
 2. 双向编码
 
 3. 语言遮罩
 
->[X]  Mask掩盖，能更有效学习
+[X]  Mask掩盖，能更有效学习
 
->[CLS]  每个序列的第一个 token 始终是特殊分类嵌入（special classification embedding），对应于该 token 的最终隐藏状态（即Transformer的输出）被用于分类任务的聚合序列表示。如果没有分类任务的话，这个向量是被忽略的。
+[CLS]  每个序列的第一个 token 始终是特殊分类嵌入（special classification embedding），对应于该 token 的最终隐藏状态（即Transformer的输出）被用于分类任务的聚合序列表示。如果没有分类任务的话，这个向量是被忽略的。
 
->[SEP]  用于分隔一对句子的特殊符号。有两种方法用于分隔句子：第一种是使用特殊符号 SEP；第二种是添加学习句子 A 嵌入到第一个句子的每个 token 中，句子 B 嵌入到第二个句子的每个 token 中，即[CLS]+ [sent A]+ [SEP] + [sent B] + [SEP]。如果是单个输入的话，就只使用句子 A ，即[CLS]+ [sent A]+ [SEP]。
+[SEP]  用于分隔一对句子的特殊符号。有两种方法用于分隔句子：第一种是使用特殊符号 SEP；第二种是添加学习句子 A 嵌入到第一个句子的每个 token 中，句子 B 嵌入到第二个句子的每个 token 中，即[CLS]+ [sent A]+ [SEP] + [sent B] + [SEP]。如果是单个输入的话，就只使用句子 A ，即[CLS]+ [sent A]+ [SEP]。
 
 
 
@@ -128,7 +129,7 @@ cmd.exe不支持sh脚本，可在git bash上执行，或在控制台带参数运
 ```bash
 bash run_bert_ner.sh
 ```
-对于不同的语料、输出和参数，需要相应地修改`run_ner.sh`
+对于不同的语料、输出和参数，需要相应地修改`run_bert_ner.sh`
 ```shell
 #!/usr/bin/env bash
 
