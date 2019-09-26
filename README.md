@@ -5,7 +5,9 @@
 目前常用的、成熟的NER语料有：
 - 人民日报的语料 [B, I, O] * [PER, LOC, ORG]
 - MRSA微软亚洲研究院的语料 [B, I, O] * [PER, LOC, ORG]
-这些都是通用领域的现代语料
+
+这些都是通用领域的现代语料。
+
 另外，可以去一些会议和相关竞赛找专业领域较强的语料，如CCKS全国知识图谱与语义计算大会
 
 ## 特征选取与定义
@@ -23,6 +25,7 @@ BIESO (其他的字符角色定义还有很多)
 - LOCATION 地名
 - ORGNIZATION 机构名
 - TIME 时间
+
 但是在其他领域，如医学领域，实体类别可细分为：
 - TREATMENT 治疗方式
 - BODY 身体部位
@@ -31,7 +34,7 @@ BIESO (其他的字符角色定义还有很多)
 - DISEASE 疾病实体
 - MEDICINE 药物实体
 
-所以在训练预料中，结合字符角色定义和实体类别定义，一句话按照字符（word/char）可标注为：
+所以在训练预料中，结合字符角色定义和实体类别定义，一个句子按照字符（word/char）可标注为：
 （*注意：每句话以空行分隔，即为一个序列*）
 ```
 美 B-LOC
@@ -80,9 +83,12 @@ BERT的特点在于：
 2. 双向编码
 
 3. 语言遮罩
-[X]：Mask掩盖，能更有效学习
-[CLS]：每个序列的第一个 token 始终是特殊分类嵌入（special classification embedding），对应于该 token 的最终隐藏状态（即Transformer的输出）被用于分类任务的聚合序列表示。如果没有分类任务的话，这个向量是被忽略的。
-[SEP]：用于分隔一对句子的特殊符号。有两种方法用于分隔句子：第一种是使用特殊符号 SEP；第二种是添加学习句子 A 嵌入到第一个句子的每个 token 中，句子 B 嵌入到第二个句子的每个 token 中，即[CLS]+ [sent A]+ [SEP] + [sent B] + [SEP]。如果是单个输入的话，就只使用句子 A ，即[CLS]+ [sent A]+ [SEP]。
+
+>[X]  Mask掩盖，能更有效学习
+
+>[CLS]  每个序列的第一个 token 始终是特殊分类嵌入（special classification embedding），对应于该 token 的最终隐藏状态（即Transformer的输出）被用于分类任务的聚合序列表示。如果没有分类任务的话，这个向量是被忽略的。
+
+>[SEP]  用于分隔一对句子的特殊符号。有两种方法用于分隔句子：第一种是使用特殊符号 SEP；第二种是添加学习句子 A 嵌入到第一个句子的每个 token 中，句子 B 嵌入到第二个句子的每个 token 中，即[CLS]+ [sent A]+ [SEP] + [sent B] + [SEP]。如果是单个输入的话，就只使用句子 A ，即[CLS]+ [sent A]+ [SEP]。
 
 
 
@@ -90,7 +96,7 @@ BERT的特点在于：
 
 1. Google在`run_classifier.py`示例中的任务都是针对**句子对输入**（next sentence prediction,），而在NER任务中只有单个句子输入
 
-2. 在`get_lables`里定义标签类别，如果标签类别的数量改变，需要修改相应的paddding数目
+2. 在`get_lables`里定义标签类别，视具体任务而定
 ```python
 #return ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "X", "[CLS]", "[SEP]"]
 return ["X", "B", "I", "E", "S", "O", "[CLS]", "[SEP]"]
@@ -105,11 +111,10 @@ return ["X", "B", "I", "E", "S", "O", "[CLS]", "[SEP]"]
 - TensorFlow >= 1.10.0
 - numpy >= 1.14.3
 - Anaconda (recommended on Windows)
-`conda install tensorflow, numpy`
 
 ### Tips
 - 在CPU上运行可能会卡机，建议在实验室电脑上训练
-- 模型训练耗时约1day+，注意训练过程中的自动保存
+- 模型训练耗时约day+
 
 
 ### How to run
@@ -151,7 +156,7 @@ python bert_ner.py
 ```
 
 
-## 抽取应用
+## 应用TODO
 
 - [ ] 根据预测输出的标签，抽取目标实体；
 - [ ] OOV(Out of vocabulary)的问题，有实验证明BERT的效果较好；
