@@ -1,5 +1,12 @@
 # model
 chinese_L-12_H-768_A-12/*.ckpt.*
+output/**/*
+
+# data
+data/**/*
+
+# pycharm
+.idea/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

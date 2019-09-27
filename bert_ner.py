@@ -23,14 +23,6 @@ import pickle
 import logging
 
 
-LOG_SETTINGS = {
-    'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-    'datefmt': '%Y-%m-%d %H:%M:%S',
-    'filename': './output/bert_ner.log',
-    'filemode': 'a',
-}
-logging.basicConfig(level=logging.INFO, **LOG_SETTINGS)
-
 # ML的模型中有大量需要tuning的超参数
 # flags可以帮助我们通过命令行来动态的更改代码中的参数
 # 类似于 argparse
@@ -131,6 +123,14 @@ flags.DEFINE_bool("bilstm", True,
 
 flags.DEFINE_bool("crf_only", False,
                     "use crf only.")
+
+LOG_SETTINGS = {
+    'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+    'datefmt': '%Y-%m-%d %H:%M:%S',
+    'filename': FLAGS.output_dir + 'bert_ner.log',
+    'filemode': 'a',
+}
+logging.basicConfig(level=logging.INFO, **LOG_SETTINGS)
 
 
 class InputExample(object):
@@ -341,8 +341,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
 
 def file_based_convert_examples_to_features(
         examples, label_list, max_seq_length, tokenizer, output_file, mode=None):
-    # writer = tf.python_io.TFRecordWriter(path=output_file)
-    writer = tf.io.TFRecordWriter(path=output_file)
+    writer = tf.python_io.TFRecordWriter(path=output_file)
+    # writer = tf.io.TFRecordWriter(path=output_file)
     batch_tokens = []
     batch_labels = []
     for ex_index, example in enumerate(examples):
@@ -537,12 +537,13 @@ def Writer(output_predict_file, result, batch_tokens, batch_labels, id2label):
         for i, prediction in enumerate(predictions):
             token = batch_tokens[i]
             predict = id2label[prediction]
-            true_label = id2label[batch_labels[i]]
+            # true_label = id2label[batch_labels[i]]
             if token!="[PAD]" and token!="[CLS]" and true_label !="X":
 
                 if predict=="X" and not predict.startswith("##"):
                     predict="O"
-                line = "{}\t{}\t{}\n".format(token, true_label, predict)
+                # line = "{}\t{}\t{}\n".format(token, true_label, predict)
+                line = "{}\t{}\n".format(token, predict)
                 wf.write(line)
 
 
@@ -563,7 +564,8 @@ def main(_):
         raise ValueError("Cannot use sequence length {} because the BERT model, was only trained up to sequence length {}".format(
             FLAGS.max_seq_length, bert_config.max_position_embeddings))
 
-    tf.io.gfile.makedirs(FLAGS.output_dir)
+    # tf.io.gfile.makedirs(FLAGS.output_dir)
+    tf.gfile.MakeDirs(FLAGS.output_dir)
 
     task_name = FLAGS.task_name.lower()
     if task_name not in processors:
@@ -719,5 +721,5 @@ if __name__ == '__main__':
     flags.mark_flag_as_required("vocab_file")
     flags.mark_flag_as_required("bert_config_file")
     flags.mark_flag_as_required("output_dir")
-    # tf.app.run()
-    tf.compat.v1.app.run()
+    tf.app.run()
+    # tf.compat.v1.app.run()

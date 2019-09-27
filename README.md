@@ -147,19 +147,19 @@ python bert_ner.py\
     --train_batch_size=32   \
     --learning_rate=2e-5   \
     --num_train_epochs=4.0   \
-    --output_dir=[save path of model]
-    --bilstm=[whether to add bilstm_crf_layer, default to True]
+    --output_dir=[save path of model]   \
+    --bilstm=[whether to add bilstm_crf_layer, default to True]   \
     --crf_only=[whether to use crf_layer only, default to False]
 
 
 # 以人民日报语料为例
 # 其他参数在bert_ber中有默认值
 python bert_ner.py
-    --data_dir=./data/ChinaDaily/
-    --bert_config_file=chinese_L-12_H-768_A-12/bert_config.json
-    --init_checkpoint=chinese_L-12_H-768_A-12/bert_model.ckpt
-    --vocab_file=data/vocab.txt
-    --output_dir=./output/bert/ChinaDaily
+    --data_dir=./data/ChinaDaily/   \
+    --bert_config_file=chinese_L-12_H-768_A-12/bert_config.json   \
+    --init_checkpoint=chinese_L-12_H-768_A-12/bert_model.ckpt   \
+    --vocab_file=data/vocab.txt   \
+    --output_dir=./output/ChinaDaily/bert   \
 ```
 
 
