@@ -246,7 +246,7 @@ class NerProcessor(DataProcessor):
         '''
         # return ["[PAD]", "X", "B", "I", "E", "S", "O", "[CLS]", "[SEP]"]
         # based on ChinaDaily corpus
-        return ["[PAD]", "X", "B-PER", "I-PER", "B-LOC", "I-LOC", "B-ORG", "I-ORG", "O", "[CLS]", "[SEP]"]
+        return ["[PAD]", "X", "B-LOC", "I-LOC", "B-PER", "I-PER", "B-ORG", "I-ORG", "O", "[CLS]", "[SEP]"]
 
 
 def convert_single_example(ex_index, example, label_list, max_seq_length, tokenizer, mode):
@@ -527,7 +527,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 def Writer(output_predict_file, result, batch_tokens, batch_labels, id2label):
     with open(output_predict_file,'w') as wf:
         
-        if FLAGS.crf:
+        if FLAGS.bilstm:
             predictions  = []
             for _, pred in enumerate(result):
                 predictions.extend(pred)
