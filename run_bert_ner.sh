@@ -3,7 +3,7 @@
 python bert_ner.py\
     --task_name="NER"  \
     --do_lower_case=False \
-    --do_train=False   \
+    --do_train=True   \
     --do_eval=True   \
     --do_predict=True \
     --data_dir=./data/ChinaDaily   \
@@ -14,6 +14,6 @@ python bert_ner.py\
     --train_batch_size=32   \
     --learning_rate=2e-5   \
     --num_train_epochs=4.0   \
-    --output_dir=./output/ChinaDaily/bert   \
+    --output_dir=./output/ChinaDaily/bert_bilstm_crf/   \
     --bilstm=True   \
     --crf_only=False

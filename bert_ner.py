@@ -124,6 +124,16 @@ flags.DEFINE_bool("bilstm", True,
 flags.DEFINE_bool("crf_only", False,
                     "use crf only.")
 
+# lstm params
+flags.DEFINE_integer('lstm_size', 128,
+                     'size of lstm units')
+					 
+flags.DEFINE_integer('num_layers', 1,
+                     'number of rnn layers, default is 1')
+					 
+flags.DEFINE_string('cell', 'lstm',
+                    'which rnn cell used')
+
 LOG_SETTINGS = {
     'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
     'datefmt': '%Y-%m-%d %H:%M:%S',
@@ -454,7 +464,8 @@ def create_model(bert_config, is_training, input_ids, input_mask,
         logits = hidden2tag(output_layer, num_labels)
         logits = tf.reshape(logits, [-1, FLAGS.max_seq_length, num_labels])
         loss, predict = softmax_layer(logits, labels, num_labels, input_mask)
-        return (loss, logits, predict)
+    
+    return (loss, logits, predict)
 
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
@@ -537,7 +548,7 @@ def Writer(output_predict_file, result, batch_tokens, batch_labels, id2label):
         for i, prediction in enumerate(predictions):
             token = batch_tokens[i]
             predict = id2label[prediction]
-            # true_label = id2label[batch_labels[i]]
+            true_label = id2label[batch_labels[i]]
             if token!="[PAD]" and token!="[CLS]" and true_label !="X":
 
                 if predict=="X" and not predict.startswith("##"):
@@ -671,7 +682,7 @@ def main(_):
         with open(output_eval_file, "w") as writer:
             logging.info("***** Eval results *****")
             confusion_matrix = result["confusion_matrix"]
-            p, r, f = metrics_cm.calculate(confusion_matrix,len(label_list)-1)
+            p, r, f = metrics_cm.calculate(confusion_matrix, len(label_list)-1)
             logging.info("P = %s",  str(p))
             logging.info("R = %s",  str(r))
             logging.info("F = %s",  str(f))
