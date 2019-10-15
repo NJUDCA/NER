@@ -5,23 +5,23 @@ from tensorflow.contrib.layers.python.layers import initializers
 
 
 class BiLSTM_CRF:
-    def __init__(self, embedded_chars, hidden_unit, cell_type, num_layers, dropout_rate,
-                 num_labels, max_seq_length, labels, lengths, is_training, crf_only=False):
+    def __init__(self, embedded_chars, lstm_size, cell_type, num_layers, dropout_rate,
+                 num_labels, max_seq_length, labels, lengths, is_training, crf_only=True):
         """
         BLSTM-CRF 网络
         :param embedded_chars: Fine-tuning embedding input
-        :param hidden_unit: LSTM的隐含单元个数
+        :param lstm_size: LSTM的隐含单元个数
         :param cell_type: RNN类型（LSTM OR GRU DICNN will be add in feature）
         :param num_layers: RNN的层数
-        :param droupout_rate: droupout rate
+        :param dropout_rate: droupout rate
         :param num_labels: 标签数量
         :param max_seq_length: 序列最大长度
         :param labels: 真实标签
         :param lengths: [batch_size] 每个batch下序列的真实长度
         :param is_training: 是否是训练过程
         """
-        self.hidden_unit = hidden_unit
-        self.droupout_rate = dropout_rate
+        self.lstm_size = lstm_size
+        self.dropout_rate = dropout_rate
         self.cell_type = cell_type
         self.num_layers = num_layers
         self.embedded_chars = embedded_chars
@@ -32,16 +32,17 @@ class BiLSTM_CRF:
         self.embedding_size = embedded_chars.shape[-1].value
         self.is_training = is_training
         self.crf_only = crf_only
+        self.initializer = initializers.xavier_initializer()
 
     def _construct_cell(self):
         cell = None
         if self.cell_type == 'lstm':
-            cell = rnn.BasicLSTMCell(self.hidden_unit)
+            cell = rnn.BasicLSTMCell(self.lstm_size)
         elif self.cell_type == 'gru':
-            cell = rnn.GRUCell(self.hidden_unit)
+            cell = rnn.GRUCell(self.lstm_size)
 
-        if self.droupout_rate is not None:
-            cell = rnn.DropoutWrapper(cell, output_keep_prob=self.droupout_rate)
+        if self.dropout_rate is not None:
+            cell = rnn.DropoutWrapper(cell, output_keep_prob=self.dropout_rate)
         return cell
 
     def bilstm_layer(self):
@@ -67,23 +68,22 @@ class BiLSTM_CRF:
         # tf.contrib.layers.xavier_initializer
         # 初始化权重矩阵
         with tf.variable_scope('project_bilstm_layer'):
-            W = tf.get_variable('W', shape=[self.hidden_unit * 2, self.hidden_unit],
-                                dtype=tf.float32, initializer=initializers.xavier_initializer())
-            b = tf.get_variable("b", shape=[self.hidden_unit], dtype=tf.float32,
+            W = tf.get_variable('W', shape=[self.lstm_size * 2, self.lstm_size],
+                                dtype=tf.float32, initializer=self.initializer)
+            b = tf.get_variable("b", shape=[self.lstm_size], dtype=tf.float32,
                                     initializer=tf.zeros_initializer())
-            output = tf.reshape(lstm_output, shape=[-1, self.hidden_unit * 2])
+            output = tf.reshape(lstm_output, shape=[-1, self.lstm_size * 2])
             hidden = tf.tanh(tf.nn.xw_plus_b(output, W, b))
 
         # project to score of tags
         with tf.variable_scope("logits"):
-            W = tf.get_variable("W", shape=[self.hidden_unit, self.num_labels],
-                                dtype=tf.float32, initializer=initializers.xavier_initializer())
+            W = tf.get_variable("W", shape=[self.lstm_size, self.num_labels],
+                                dtype=tf.float32, initializer=self.initializer)
 
             b = tf.get_variable("b", shape=[self.num_labels], dtype=tf.float32,
                                 initializer=tf.zeros_initializer())
 
-            # tf.nn.xw_plus_b(x, weights, biases.)
-            # 相当于matmul(x, weights) + biases.
+            # tf.nn.xw_plus_b(x, weights, biases.) 相当于 matmul(x, weights) + biases.
             pred = tf.nn.xw_plus_b(hidden, W, b)
         return tf.reshape(pred, [-1, self.max_seq_length, self.num_labels])
 
@@ -96,13 +96,13 @@ class BiLSTM_CRF:
         with tf.variable_scope("project_crf_layer"):
             with tf.variable_scope("logits"):
                 W = tf.get_variable("W", shape=[self.embedding_size, self.num_labels],
-                                    dtype=tf.float32, initializer=initializers.xavier_initializer())
+                                    dtype=tf.float32, initializer=self.initializer)
 
                 b = tf.get_variable("b", shape=[self.num_labels], dtype=tf.float32,
                                     initializer=tf.zeros_initializer())
                 output = tf.reshape(self.embedded_chars,
                                     shape=[-1, self.embedding_size])  # [batch_size, embedding_size]
-                pred = tf.tanh(tf.nn.xw_plus_b(output, W, b))
+                pred = tf.nn.xw_plus_b(output, W, b)
             return tf.reshape(pred, [-1, self.max_seq_length, self.num_labels])
 
     def crf_layer(self, logits):
@@ -115,7 +115,7 @@ class BiLSTM_CRF:
             trans = tf.get_variable(
                 "transitions",
                 shape=[self.num_labels, self.num_labels],
-                initializer=initializers.xavier_initializer())
+                initializer=self.initializer)
             if self.labels is None:
                 return None, trans
             else:
@@ -127,8 +127,8 @@ class BiLSTM_CRF:
                 return tf.reduce_mean(-log_likelihood), trans
 
     def add_bilstm_crf_layer(self):
-        if self.is_training:
-            self.embedded_chars = tf.nn.dropout(self.embedded_chars, self.droupout_rate)
+        # if self.is_training:
+        #     self.embedded_chars = tf.nn.dropout(self.embedded_chars, self.dropout_rate)
 
         if self.crf_only:
             # project layer

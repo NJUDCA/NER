@@ -112,4 +112,4 @@ def calculate(total_cm, num_class):
         precisions.append(precision)
         recalls.append(recall)
         fs.append(f)
-    return np.mean(precisions), np.mean(recalls), np.mean(fs)
+    return precisions, recalls, fs

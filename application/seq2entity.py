@@ -1,11 +1,6 @@
 import numpy as np
 import logging
 
-LOG_SETTINGS = {
-    'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-    'datefmt': '%Y-%m-%d %H:%M:%S',
-    'filemode': 'a',
-}
 
 class Seq2Entity:
     def __init__(self, tokens, labels):
@@ -35,6 +30,8 @@ class Seq2Entity:
                     continue
             except Exception as e:
                 logging.info('i: {}, token: {}, label: {}, error: {}'.format(i, token, label, str(e)))
+        print('{} PER:\n{}\n'.format(len(PER), ' '.join([str(p) for p in PER if len(PER)>0])))
+        logging.info('{} PER:\n{}\n'.format(len(PER), ' '.join([str(p) for p in PER if len(PER)>0])))
         return PER
 
     def get_loc_entity(self):
@@ -59,6 +56,8 @@ class Seq2Entity:
                     continue
             except Exception as e:
                 logging.info('i: {}, token: {}, label: {}, error: {}'.format(i, token, label, str(e)))
+        print('{} LOC:\n{}\n'.format(len(LOC), ' '.join([str(l) for l in LOC if len(LOC)>0])))
+        logging.info('{} LOC:\n{}\n'.format(len(LOC), ' '.join([str(l) for l in LOC if len(LOC)>0])))
         return LOC
 
     def get_org_entity(self):
@@ -83,29 +82,6 @@ class Seq2Entity:
                     continue
             except Exception as e:
                 logging.info('i: {}, token: {}, label: {}, error: {}'.format(i, token, label, str(e)))
+        print('{} ORG:\n{}\n'.format(len(ORG), ' '.join([str(o) for o in ORG if len(ORG)>0])))
+        logging.info('{} ORG:\n{}\n'.format(len(ORG), ' '.join([str(o) for o in ORG if len(ORG)>0])))
         return ORG
-
-
-output_dir = '../output/ChinaDaily/BERT/'
-
-logging.basicConfig(level=logging.INFO, **LOG_SETTINGS, filename=output_dir + 'seq2entity.log')
-logging.info('output_dir: {}'.format(output_dir))
-
-input_file = output_dir + 'label_test.txt'
-output_per = output_dir + 'per.txt'
-output_loc = output_dir + 'loc.txt'
-output_org = output_dir + 'org.txt'
-
-seq = np.loadtxt(input_file, dtype=str)
-seq2entity = Seq2Entity(seq[:, 0], seq[:, 2])
-per = seq2entity.get_per_entity()
-loc = seq2entity.get_loc_entity()
-org = seq2entity.get_org_entity()
-logging.info('PER: {}'.format(len(per)))
-logging.info('LOC: {}'.format(len(loc)))
-logging.info('ORG: {}'.format(len(org)))
-np.savetxt(output_per, np.array(per), fmt="%s")
-np.savetxt(output_loc, np.array(loc), fmt="%s")
-np.savetxt(output_org, np.array(org), fmt="%s")
-
-

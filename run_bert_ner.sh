@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 python bert_ner.py\
-    --task_name="NER"  \
     --do_lower_case=False \
     --do_train=True   \
     --do_eval=True   \
@@ -13,7 +12,7 @@ python bert_ner.py\
     --max_seq_length=128   \
     --train_batch_size=32   \
     --learning_rate=2e-5   \
-    --num_train_epochs=4.0   \
-    --output_dir=./output/ChinaDaily/bert_bilstm_crf/   \
+    --num_train_epochs=6.0   \
+    --output_dir=./output/ChinaDaily/bert_crf/   \
     --bilstm=True   \
-    --crf_only=False
+    --crf_only=True

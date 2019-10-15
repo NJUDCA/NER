@@ -1,32 +1,33 @@
-#! usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
-Copyright 2018 The Google AI Language Team Authors.
-BASED ON Google_BERT.
-@Author:zhoukaiyin
-Adjust code for chinese ner
+Copyright 2018 by mhcao
+说明：对于predict，可以不使用TFRecode来存储数据，因为数据量很少啦，不过这里为了方便，没有进行更改，只需要把数据包装成一个含有四个特征的字典即可！这也许会给速度提高一些，不过关系不大
 """
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import collections
 import os
+import sys
+sys.path.append("..")
 from bert import modeling
-from bert import optimization
 from bert import tokenization
 from blstm_crf.bilstm_crf_layer import BiLSTM_CRF
-from metrics import tf_metrics
+from application.txt2seq import Txt2Seq
+from application.seq2entity import Seq2Entity
 import tensorflow as tf
 import pickle
 import logging
 import numpy as np
 
-
-# ML的模型中有大量需要tuning的超参数
-# flags可以帮助我们通过命令行来动态的更改代码中的参数
-# 类似于 argparse
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+'''
+0 = all messages are logged (default behavior)
+1 = INFO messages are not printed
+2 = INFO and WARNING messages are not printed
+3 = INFO, WARNING, and ERROR messages are not printed
+'''
 flags = tf.flags
 FLAGS = flags.FLAGS
 
@@ -53,12 +54,6 @@ flags.DEFINE_bool("do_lower_case", True,
 flags.DEFINE_integer("max_seq_length", 128,
                      "The maximum total input sequence length after WordPiece tokenization.")
 
-flags.DEFINE_bool("do_train", True,
-                  "Whether to run training.")
-
-flags.DEFINE_bool("do_eval", True,
-                  "Whether to run eval on the dev set.")
-
 flags.DEFINE_bool("do_predict", True,
                   "Whether to run the model in inference mode on the test set.")
 
@@ -77,13 +72,6 @@ flags.DEFINE_float("learning_rate", 5e-5,
 flags.DEFINE_float("dropout_rate", 0.1,
                    "The initial learning rate for Adam.")
 
-flags.DEFINE_float("num_train_epochs", 3.0,
-                   "Total number of training epochs to perform.")
-
-flags.DEFINE_float("warmup_proportion", 0.1,
-                   "Proportion of training to perform linear learning rate warmup for. "
-                   "E.g., 0.1 = 10% of training.")
-
 flags.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
 
@@ -96,25 +84,25 @@ flags.DEFINE_string("vocab_file", None,
 flags.DEFINE_bool("use_tpu", False,
                   "Whether to use TPU or GPU/CPU.")
 
-flags.DEFINE_string(
+tf.flags.DEFINE_string(
     "tpu_name", None,
     "The Cloud TPU to use for training. This should be either the name "
     "used when creating the Cloud TPU, or a grpc://ip.address.of.tpu:8470 "
     "url.")
 
-flags.DEFINE_string(
+tf.flags.DEFINE_string(
     "tpu_zone", None,
     "[Optional] GCE zone where the Cloud TPU is located in. If not "
     "specified, we will attempt to automatically detect the GCE project from "
     "metadata.")
 
-flags.DEFINE_string(
+tf.flags.DEFINE_string(
     "gcp_project", None,
     "[Optional] Project name for the Cloud TPU-enabled project. If not "
     "specified, we will attempt to automatically detect the GCE project from "
     "metadata.")
 
-flags.DEFINE_string("master", None,
+tf.flags.DEFINE_string("master", None,
                        "[Optional] TensorFlow master URL.")
 
 flags.DEFINE_integer("num_tpu_cores", 8,
@@ -123,7 +111,7 @@ flags.DEFINE_integer("num_tpu_cores", 8,
 flags.DEFINE_bool("bilstm", True,
                   "use bilstm + crf.")
 
-flags.DEFINE_bool("crf_only", True,
+flags.DEFINE_bool("crf_only", False,
                   "use crf only.")
 
 # lstm params
@@ -136,13 +124,8 @@ flags.DEFINE_integer('num_layers', 1,
 flags.DEFINE_string('cell', 'lstm',
                     'which rnn cell used')
 
-
-LOG_SETTINGS = {
-    'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-    'datefmt': '%Y-%m-%d %H:%M:%S',
-    'filename': FLAGS.output_dir + 'bert_ner.log',
-    'filemode': 'a',
-}
+flags.DEFINE_bool('raw_input', True,
+                  'default to input text for prediction')
 
 
 class InputExample(object):
@@ -247,9 +230,9 @@ class NerProcessor(DataProcessor):
             self._read_data(os.path.join(data_dir, 'dev.txt')), 'dev'
         )
 
-    def get_test_examples(self, data_dir):
+    def get_predict_examples(self, data_dir):
         return self._create_example(
-            self._read_data(os.path.join(data_dir, "test.txt")), "test")
+            self._read_data(os.path.join(data_dir, "predict.txt")), "test")
 
     def get_labels(self):
         '''
@@ -279,7 +262,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
         label_map[label] = i
     with open(FLAGS.output_dir + '/label2id.pkl', 'wb+') as wf:
         pickle.dump(label_map, wf)
-    
+
     textlist = example.text.split(' ')
     labellist = example.label.split(' ')
     tokens = []
@@ -472,11 +455,11 @@ def create_model(bert_config, is_training, input_ids, input_mask,
         used = tf.sign(tf.abs(input_ids))
         lengths = tf.reduce_sum(used, reduction_indices=1)
         '''
-        # [batch_size] 大小的向量，包含了当前batch中的序列长度  
+        # [batch_size] 大小的向量，包含了当前batch中的序列长度
         lengths = tf.reduce_sum(input_mask, axis=1)
         max_seq_length = output_layer.shape[1].value
 
-        bilstm_crf = BiLSTM_CRF(embedded_chars=output_layer, lstm_size=FLAGS.lstm_size, cell_type=FLAGS.cell, num_layers=FLAGS.num_layers, 
+        bilstm_crf = BiLSTM_CRF(embedded_chars=output_layer, lstm_size=FLAGS.lstm_size, cell_type=FLAGS.cell, num_layers=FLAGS.num_layers,
                                 dropout_rate=FLAGS.dropout_rate, num_labels=num_labels, max_seq_length=max_seq_length, labels=labels,
                                 lengths=lengths, is_training=is_training, crf_only=FLAGS.crf_only)
         loss, logits, predict = bilstm_crf.add_bilstm_crf_layer()
@@ -484,7 +467,7 @@ def create_model(bert_config, is_training, input_ids, input_mask,
         logits = hidden2tag(output_layer, num_labels)
         logits = tf.reshape(logits, [-1, FLAGS.max_seq_length, num_labels])
         loss, predict = softmax_layer(logits, labels, num_labels, input_mask)
-    
+
     return (loss, logits, predict)
 
 
@@ -526,57 +509,26 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             logging.info("  name = {}, shape = {} {}".format(var.name, var.shape, init_string))
 
         output_spec = None
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            train_op = optimization.create_optimizer(
-                total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
-            output_spec = tf.contrib.tpu.TPUEstimatorSpec(
-                mode=mode,
-                loss=total_loss,
-                train_op=train_op,
-                scaffold_fn=scaffold_fn)
-        elif mode == tf.estimator.ModeKeys.EVAL:
-            # 针对NER ,进行了修改
-            def metric_fn(label_ids, pred_ids):
-                try:
-                    # confusion matrix
-                    cm = tf_metrics.streaming_confusion_matrix(label_ids, pred_ids, num_labels, weights=input_mask)
-                    return {
-                        "confusion_matrix": cm
-                    }
-                except Exception as e:
-                    logging.error(str(e))
 
-            eval_metrics = (metric_fn, [label_ids, pred_ids])
-
-            output_spec = tf.contrib.tpu.TPUEstimatorSpec(
-                mode=mode, loss=total_loss, eval_metrics=eval_metrics, scaffold_fn=scaffold_fn
-            )
-        else:
-            output_spec = tf.contrib.tpu.TPUEstimatorSpec(
-                mode=mode, predictions=pred_ids, scaffold_fn=scaffold_fn)
+        output_spec = tf.contrib.tpu.TPUEstimatorSpec(
+            mode=mode, predictions=pred_ids, scaffold_fn=scaffold_fn)
         return output_spec
 
     return model_fn
 
 
 def main(_):
-    # tf.logging.set_verbosity(tf.logging.INFO)
-
     logging.info(str(FLAGS))
 
     processors = {
         "ner": NerProcessor
     }
-    # if not FLAGS.do_train and not FLAGS.do_eval:
-    #     raise ValueError("At least one of `do_train` or `do_eval` must be True.")
 
     bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
     if FLAGS.max_seq_length > bert_config.max_position_embeddings:
         raise ValueError("Cannot use sequence length {} because the BERT model, was only trained up to sequence length {}".format(
             FLAGS.max_seq_length, bert_config.max_position_embeddings))
-
-    # tf.gfile.MakeDirs(FLAGS.output_dir)
 
     task_name = FLAGS.task_name.lower()
     if task_name not in processors:
@@ -605,16 +557,9 @@ def main(_):
             num_shards=FLAGS.num_tpu_cores,
             per_host_input_for_training=is_per_host))
 
-    train_examples = None
     num_train_steps = None
     num_warmup_steps = None
 
-    if FLAGS.do_train:
-        train_examples = processor.get_train_examples(FLAGS.data_dir)
-        num_train_steps = int(
-            len(train_examples) / (FLAGS.train_batch_size * FLAGS.num_train_epochs))
-        num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
-    
     # 返回的model_dn 是一个函数，其定义了模型，训练，评测方法,
     # 并且使用钩子参数，加载了BERT模型的参数进行了自己模型的参数初始化过程;
     # tf 新的架构方法，通过定义model_fn 函数，定义模型,
@@ -638,73 +583,25 @@ def main(_):
         eval_batch_size=FLAGS.eval_batch_size,
         predict_batch_size=FLAGS.predict_batch_size)
 
-    if FLAGS.do_train:
-        # 1. 将数据转化为tf_record 数据
-        train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
-        print('***train_file***', train_file)
-        _, _ = file_based_convert_examples_to_features(
-            train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
-        logging.info("***** Running training *****")
-        logging.info("  Num examples = %d", len(train_examples))
-        logging.info("  Batch size = %d", FLAGS.train_batch_size)
-        logging.info("  Num steps = %d", num_train_steps)
-
-        # 2.读取record 数据，组成batch
-        train_input_fn = file_based_input_fn_builder(
-            input_file=train_file,
-            seq_length=FLAGS.max_seq_length,
-            is_training=True,
-            drop_remainder=True)
-        estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
-
-    if FLAGS.do_eval:
-        eval_examples = processor.get_dev_examples(FLAGS.data_dir)
-        eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
-        _, _ = file_based_convert_examples_to_features(
-            eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
-
-        logging.info("***** Running evaluation *****")
-        logging.info("  Num examples = %d", len(eval_examples))
-        logging.info("  Batch size = %d", FLAGS.eval_batch_size)
-
-        eval_steps = None
-        eval_drop_remainder = True if FLAGS.use_tpu else False
-        if FLAGS.use_tpu:
-            eval_steps = int(len(eval_examples) / FLAGS.eval_batch_size)
-
-        eval_input_fn = file_based_input_fn_builder(
-            input_file=eval_file,
-            seq_length=FLAGS.max_seq_length,
-            is_training=False,
-            drop_remainder=eval_drop_remainder)
-
-        result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
-        output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
-        output_eval_cm = os.path.join(FLAGS.output_dir, "eval_results_cm.txt")
-
-        with open(output_eval_file, "w") as writer:
-            logging.info("***** Eval results *****")
-            writer.write('loss:\n{}\n'.format(result['loss']))
-            writer.write('global_step:\n{}\n'.format(result['global_step']))
-            confusion_matrix = result.get("confusion_matrix", None)
-            np.savetxt(output_eval_cm, confusion_matrix, fmt="%.7f", delimiter='\t', newline='\n')
-            try:
-                precisions, recalls, fs = tf_metrics.calculate(confusion_matrix, len(label_list))
-                logging.info('Precision: {}'.format('\t'.join([str(p) for p in precisions])))
-                logging.info('Recall: {}'.format('\t'.join([str(r) for r in recalls])))
-                logging.info('F1: {}'.format('\t'.join([str(f) for f in fs])))
-                writer.write('Precision: {}\n'.format('\t'.join([str(p) for p in precisions])))
-                writer.write('Recall: {}\n'.format('\t'.join([str(r) for r in recalls])))
-                writer.write('F1: {}\n'.format('\t'.join([str(f) for f in fs])))
-            except Exception as e:
-                logging.error(str(e))
-
     if FLAGS.do_predict:
+        if FLAGS.raw_input:
+            raw_input = input('Please input your text to extract entities:')
+            lines_predict = list(raw_input.replace(' ', "O").strip())
+            label_predict = ['O'] * len(lines_predict)
+            lines = []
+            l = ' '.join([label for label in label_predict if len(label) > 0])
+            w = ' '.join([word for word in lines_predict if len(word) > 0])
+            lines.append([l,w])
+            predict_examples = processor._create_example(lines, 'test')
+        else:
+            Txt2Seq(FLAGS.data_dir, 'sample.txt')
+            predict_examples = processor.get_predict_examples(FLAGS.data_dir)
+
         with open(FLAGS.output_dir + '/label2id.pkl', 'rb') as rf:
             label2id = pickle.load(rf)
             id2label = {value: key for key, value in label2id.items()}
-        predict_examples = processor.get_test_examples(FLAGS.data_dir)
-        predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+
+        predict_file = os.path.join(FLAGS.data_dir, "predict.tf_record")
         batch_tokens, batch_labels = file_based_convert_examples_to_features(
             predict_examples, label_list, FLAGS.max_seq_length, tokenizer, predict_file, mode="test")
 
@@ -714,7 +611,6 @@ def main(_):
 
         predict_drop_remainder = True if FLAGS.use_tpu else False
         if FLAGS.use_tpu:
-            # Warning: According to tpu_estimator.py Prediction on TPU is an experimental feature and hence not supported here
             raise ValueError("Prediction in TPU not supported")
 
         predict_input_fn = file_based_input_fn_builder(
@@ -724,41 +620,55 @@ def main(_):
             drop_remainder=predict_drop_remainder)
 
         result = estimator.predict(input_fn=predict_input_fn)
-        output_predict_file = os.path.join(FLAGS.output_dir, "label_test.txt")
 
-        # here if the tag is "X" means it belong to its before token for convenient evaluate use
-        def Writer(output_predict_file, result, batch_tokens, batch_labels, id2label):
-            with open(output_predict_file,'w') as wf:
-                
-                if FLAGS.bilstm:
-                    predictions  = []
-                    for _, pred in enumerate(result):
-                        predictions.extend(pred)
-                else:
-                    predictions = result
+        if FLAGS.bilstm:
+            predictions  = []
+            for _, pred in enumerate(result):
+                predictions.extend(pred)
+        else:
+            predictions = result
 
-                for i, prediction in enumerate(predictions):
-                    token = batch_tokens[i]
-                    if prediction == 0:
-                        continue
-                    predict = id2label[prediction]
-                    true_label = id2label[batch_labels[i]]
-                    if token in ['[CLS]', '[SEP]']:
-                        continue
-                    # if predict=="X"
-                    #     predict="O"
-                    line = "{}\t{}\t{}\n".format(token, true_label, predict)
-                    wf.write(line)
-        Writer(output_predict_file, result, batch_tokens, batch_labels, id2label)
+        output_predict_file = os.path.join(FLAGS.data_dir, "label_predict.txt")
+        token_seq = []
+        label_seq = []
+        with open(output_predict_file,'w') as wf:
+            for i, prediction in enumerate(predictions):
+                token = batch_tokens[i]
+                if prediction == 0:
+                    continue
+                predict = id2label[prediction]
+                if token in ['[CLS]', '[SEP]']:
+                    continue
+                token_seq.append(token)
+                label_seq.append(predict)
+                line = "{}\t{}\n".format(token, predict)
+                wf.write(line)
+
+        seq2entity = Seq2Entity(token_seq, label_seq)
+        per = seq2entity.get_per_entity()
+        loc = seq2entity.get_loc_entity()
+        org = seq2entity.get_org_entity()
+        output_per = os.path.join(FLAGS.data_dir, 'per.txt')
+        output_loc = os.path.join(FLAGS.data_dir, 'loc.txt')
+        output_org = os.path.join(FLAGS.data_dir, 'org.txt')
+        np.savetxt(output_per, np.array(per), fmt="%s")
+        np.savetxt(output_loc, np.array(loc), fmt="%s")
+        np.savetxt(output_org, np.array(org), fmt="%s")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     flags.mark_flag_as_required("data_dir")
     flags.mark_flag_as_required("vocab_file")
     flags.mark_flag_as_required("bert_config_file")
     flags.mark_flag_as_required("output_dir")
-    if not os.path.exists(FLAGS.output_dir):
-        tf.gfile.MakeDirs(FLAGS.output_dir)
-    logging.basicConfig(level=logging.INFO, **LOG_SETTINGS)
+    LOG_SETTINGS = {
+        'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+        'datefmt': '%Y-%m-%d %H:%M:%S',
+    }
+    FILE_NAME = os.path.join(FLAGS.output_dir, 'predict.log')
+    logging.basicConfig(
+        handlers=[logging.FileHandler(FILE_NAME, encoding="utf-8", mode='a')],
+        level=logging.INFO,
+        **LOG_SETTINGS
+    )
     tf.app.run()
-    # tf.compat.v1.app.run()
