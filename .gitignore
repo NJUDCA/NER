@@ -8,6 +8,12 @@ data/**/*
 # pycharm
 .idea/**
 
+# vscode
+.vscode/**
+
+# doc
+doc/**
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
