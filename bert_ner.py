@@ -3,8 +3,8 @@
 """
 Copyright 2018 The Google AI Language Team Authors.
 BASED ON Google_BERT.
-@Author:zhoukaiyin
-Adjust code for chinese ner
+@Author:xiongxin
+Adjust code for BiLSTM plus CRF based on zhoukaiyin.
 """
 
 from __future__ import absolute_import
