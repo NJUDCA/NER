@@ -1,7 +1,10 @@
+#! usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
-Copyright 2018 by mhcao
-说明：对于predict，可以不使用TFRecode来存储数据，因为数据量很少啦，不过这里为了方便，没有进行更改，只需要把数据包装成一个含有四个特征的字典即可！这也许会给速度提高一些，不过关系不大
+Copyright 2018 The Google AI Language Team Authors.
+BASED ON Google_BERT.
+@Author:xiongxin
+Adjust code for BiLSTM plus CRF based on zhoukaiyin.
 """
 from __future__ import absolute_import
 from __future__ import division
