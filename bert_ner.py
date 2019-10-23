@@ -256,7 +256,7 @@ class NerProcessor(DataProcessor):
         based on ChinaDaily corpus
         'X' is used to represent "##eer","##soo" and char not in vocab!
         '''
-        return ["X", "B-LOC", "I-LOC", "B-PER", "I-PER", "B-ORG", "I-ORG", "O", "[CLS]"]
+        return ["X", "B-LOC", "I-LOC", "B-PER", "I-PER", "B-ORG", "I-ORG", "O", "[CLS]", "[SEP]"]
 
 
 def convert_single_example(ex_index, example, label_list, max_seq_length, tokenizer, mode):
@@ -295,8 +295,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
     # only Account for [CLS] with "- 1".
     # account for ending signal [SEP], with "- 2"
     if len(tokens) >= max_seq_length - 1:
-        tokens = tokens[0: max_seq_length - 1]
-        labels = labels[0: max_seq_length - 1]
+        tokens = tokens[0: max_seq_length - 2]
+        labels = labels[0: max_seq_length - 2]
     ntokens = []
     segment_ids = []
     label_ids = []
@@ -314,9 +314,9 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
     or if add "[SEP]" the model even will cause problem, special the crf layer was used.
     '''
     # endinging signal [SEP]
-    # ntokens.append("[SEP]")
-    # segment_ids.append(0)
-    # label_ids.append(label_map["[SEP]"])
+    ntokens.append("[SEP]")
+    segment_ids.append(0)
+    label_ids.append(label_map["[SEP]"])
 
     input_ids = tokenizer.convert_tokens_to_ids(ntokens)
     input_mask = [1] * len(input_ids)
@@ -612,7 +612,7 @@ def main(_):
     if FLAGS.do_train:
         train_examples = processor.get_train_examples(FLAGS.data_dir)
         num_train_steps = int(
-            len(train_examples) / (FLAGS.train_batch_size * FLAGS.num_train_epochs))
+            len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
         num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
     
     # 返回的model_dn 是一个函数，其定义了模型，训练，评测方法,

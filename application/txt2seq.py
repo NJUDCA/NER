@@ -23,7 +23,6 @@ class Txt2Seq:
             split_pattern = r'([。？！])'
         sentences = re.split(split_pattern, sentences)
         self.sentences = ["".join(i) for i in zip(sentences[0::2], sentences[1::2])]
-        logging.info('sentences after split: {}'.format(self.sentences))
 
     def sen2seq(self, output):
         with open(output, 'w+', encoding='UTF-8') as f:

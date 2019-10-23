@@ -3,21 +3,21 @@
 
 ## 数据来源
 目前常用的、成熟的中文NER语料有：
-- 人民日报的语料 [B, I, O] * [PER, LOC, ORG]
-- MRSA微软亚洲研究院的语料 [B, I, O] * [PER, LOC, ORG]
+- 人民日报的语料 [B,  I,  O] * [PER,  LOC,  ORG]
+- MRSA微软亚洲研究院的语料 [B,  I,  O] * [PER,  LOC,  ORG]
 
 这些都是通用领域的现代语料。
 
-另外，可以去一些会议和相关竞赛找专业领域较强的语料，如CCKS全国知识图谱与语义计算大会
+另外, 可以去一些会议和相关竞赛找专业领域较强的语料, 如CCKS全国知识图谱与语义计算大会
 
 ## 特征选取与定义
 ### 字符角色定义
 BIESO (其他的字符角色定义还有很多)
-- B，即Begin，表示开始
-- I，即Intermediate，表示中间
-- E，即End，表示结尾
-- S，即Single，表示单个字符
-- O，即Other，表示其他，用于标记无关字符
+- B, 即Begin, 表示开始
+- I, 即Intermediate, 表示中间
+- E, 即End, 表示结尾
+- S, 即Single, 表示单个字符
+- O, 即Other, 表示其他, 用于标记无关字符
 
 ### 实体类别定义
 命名实体识别中常见的实体类别有：
@@ -26,7 +26,7 @@ BIESO (其他的字符角色定义还有很多)
 - ORGNIZATION 机构名
 - TIME 时间
 
-但是在其他领域，如医学领域，实体类别可细分为：
+但是在其他领域, 如医学领域, 实体类别可细分为：
 - TREATMENT 治疗方式
 - BODY 身体部位
 - SIGNS 疾病症状
@@ -34,7 +34,7 @@ BIESO (其他的字符角色定义还有很多)
 - DISEASE 疾病实体
 - MEDICINE 药物实体
 
-所以在训练预料中，结合字符角色定义和实体类别定义，一个句子（一个句子即为一个序列，以换行符'\n'分隔）按照字符（word/char）可标注为：
+在训练预料中, 结合字符角色定义和实体类别定义, 一个句子（一个句子即为一个序列, 以换行符'\n'分隔）按照字符（word/char）可标注为：
 ```
 美 B-LOC
 国 I-LOC
@@ -42,7 +42,7 @@ BIESO (其他的字符角色定义还有很多)
 华 B-PER
 莱 B-PER
 士 B-PER
-， O
+,  O
 我 O
 和 O
 他 O
@@ -53,62 +53,43 @@ BIESO (其他的字符角色定义还有很多)
 。 O
 
 ```
-针对语料的不同，亦可在此基础上添加其他特征，如增加“非汉字字符串”的定义，
-
+针对语料的不同, 亦可在此基础上添加其他特征, 如增加“非汉字字符串”的定义。
 
 
 ## 模型选取
-NER通常被转换成分类任务，类别即我们根据特征定义的**字符角色和实体类别的排列组合**
+NER通常被转换成文本表示和分类任务, 类别即我们根据特征定义的**字符角色和实体类别的排列组合**
 
 ### CRF
-条件随机场，通常作为最后一层的标签推断层。
+条件随机场, 传统的机器学习模型，在深度学习模型中通常作为最后的标签推断层。
 
 ### BiLSTM-CRF
 
-LSTM的全称是Long Short-Term Memory，它是RNN（Recurrent Neural Network）的一种。
+BiLSTM是Bi-directional Long Short-Term Memory的缩写, 是由前向LSTM与后向LSTM组合而成, 常被用来建模上下文信息。
 
-LSTM由于其设计的特点，非常适合用于对时序数据的建模，如文本数据。
+1. 使用预训练字向量作为embedding层输入, 否则, 随机化初始字向量；
+2. 然后经过两个双向LSTM层进行编码, 编码后加入dense全连接层；
+3. 最后输入CRF层进行序列标注。
 
-BiLSTM是Bi-directional Long Short-Term Memory的缩写，是由前向LSTM与后向LSTM组合而成，常被用来建模上下文信息。
+在这里, 我们使用开源的基于中文维基百科训练的100维的字向量作为embedding层, 在`blstm_ner`使用`tag2label`定义标签类别, 视具体任务而定。
 
-1. 使用预训练字向量作为embedding层输入，否则，随机化初始字向量；
-2. 然后经过两个双向LSTM层进行编码，编码后加入dense全连接层；
-3. 最后送入CRF层进行序列标注。
+在训练BiLSTM_CRF模型的过程中发现, 设置`learning_rate=0.001`, `batch_size=64`的收敛效率较好, 在第十几个epoch就达到了较好的效果。
+
+learning_rate一般通过指数衰减调参，学习率决定了参数每次更新的幅度, 如果幅度过大, 那么可能导致参数在极优值得两侧来回移动；如果幅度过小, 虽然能保证收敛性, 但这会大大降低优化速度。
+
+batch_size一般从128开始上下浮动。一个batch即批训练一次神经网络, 计算损失函数, 利用梯度下降更新网络参数。batch越大其越能代表整个数据集的分布, 但越大也意味着计算量越大, 收敛越慢。
 
 
 ### BERT
-[BERT](https://github.com/google-research/bert)（Bidirectional Encoder Representations from Transfoemers），是预训练好的语言模型，可应用于不同的NLP下游任务。
+[BERT](https://github.com/google-research/bert)（Bidirectional Encoder Representations from Transfoemers）, 是预训练好的语言模型, 可应用于不同的NLP下游任务。
 
 扩展阅读： [从Word Embedding到Bert模型—自然语言处理中的预训练技术发展史](https://zhuanlan.zhihu.com/p/49271699)
 
-
-BERT的特点在于：
-1. 预训练
-
-预训练模型的开销很大，Google提供了基于百科类语料的中文模型，另外有论文提出了基于高质量英文论文的[SCIBERT](https://github.com/allenai/scibert)
-
-2. 双向编码
-
-3. 语言遮罩
-
-[X]  Mask掩盖，能更有效学习
-
-[CLS]  每个序列的第一个 token 始终是特殊分类嵌入（special classification embedding），对应于该 token 的最终隐藏状态（即Transformer的输出）被用于分类任务的聚合序列表示。如果没有分类任务的话，这个向量是被忽略的。
-
-[SEP]  用于分隔一对句子的特殊符号。有两种方法用于分隔句子：第一种是使用特殊符号 SEP；第二种是添加学习句子 A 嵌入到第一个句子的每个 token 中，句子 B 嵌入到第二个句子的每个 token 中，即[CLS]+ [sent A]+ [SEP] + [sent B] + [SEP]。如果是单个输入的话，就只使用句子 A ，即[CLS]+ [sent A]+ [SEP]。
-
-
-
-在这里，我们使用预训练的Bert中文模型作为embedding层，考虑到NER任务的特殊性，需要对一般的分类模型进行改造：
-
-1. 在`run_classifier.py`示例中的任务都是针对**句子对输入**（next sentence prediction,），而在NER任务中只有单个句子输入
-
-2. 在`get_lables`里定义标签类别，视具体任务而定
+在这里, 我们使用预训练的Bert中文模型作为embedding层, 在`get_lables`里定义标签类别, 视具体任务而定。
 ```python
-#return ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "X", "[CLS]", "[SEP]"]
-return ["X", "B", "I", "E", "S", "O", "[CLS]", "[SEP]"]
+return ["X",  "B-LOC",  "I-LOC",  "B-PER",  "I-PER",  "B-ORG",  "I-ORG",  "O",  "[CLS]",  "[SEP]"]
 ```
 
+在训练Bert模型的过程中, 使用的是开源模型的默认参数`learning_rate=2e-5`, `batch_size=32`, 模型在验证集上的效果已经很好, 所以没有再调参数。但是加上BiLSTM层后, 在相同训练轮次(num_train_epochs=4.0)的情况下, 收敛速度减慢, 模型的训练效果不如单独的Bert, 可能是由于学习率设置过小。
 
 ## 实验
 
@@ -120,53 +101,64 @@ return ["X", "B", "I", "E", "S", "O", "[CLS]", "[SEP]"]
 - Anaconda (recommended on Windows)
 
 ### Tips
-- 在CPU上运行可能会卡机，建议在实验室电脑上训练
-- 模型训练耗时约day+
+- 在CPU上运行可能会卡机, 模型训练耗时约day+
+- [Google Colab](https://colab.research.google.com) 提供了免费的GPU, 需要科学上网
 
 
 ### How to run
-cmd.exe不支持sh脚本，可在git bash上执行，或在控制台带参数运行`python bert_ner.py`
+cmd.exe不支持sh脚本, 可在git bash上执行, 或在控制台带参数运行, 对于不同的语料、输出和参数, 需要相应地修改sh脚本
+
+1. BERT / BERT + CRF / BERT + BiLSTM + CRF
 ```bash
 bash run_bert_ner.sh
 ```
-对于不同的语料、输出和参数，需要相应地修改`run_bert_ner.sh`
+
+
 ```shell
 #!/usr/bin/env bash
 
-python bert_ner.py\
-    --task_name="NER"  \
-    --do_lower_case=False \
+# 以人民日报语料为例
+# 部分参数在bert_ber中有默认值
+python bert_ner.py
     --do_train=True   \
     --do_eval=True   \
     --do_predict=True \
-    --data_dir=[data_dir]   \
-    --vocab_file=chinese_L-12_H-768_A-12/vocab.txt  \
-    --bert_config_file=chinese_L-12_H-768_A-12/bert_config.json \
-    --init_checkpoint=chinese_L-12_H-768_A-12/bert_model.ckpt   \
-    --max_seq_length=128   \
-    --train_batch_size=32   \
-    --learning_rate=2e-5   \
-    --num_train_epochs=4.0   \
-    --output_dir=[save path of model]   \
-    --bilstm=[whether to add bilstm_crf_layer, default to True]   \
-    --crf_only=[whether to use crf_layer only, default to False]
-
-
-# 以人民日报语料为例
-# 其他参数在bert_ber中有默认值
-python bert_ner.py
     --data_dir=./data/ChinaDaily/   \
     --bert_config_file=chinese_L-12_H-768_A-12/bert_config.json   \
     --init_checkpoint=chinese_L-12_H-768_A-12/bert_model.ckpt   \
     --vocab_file=data/vocab.txt   \
+    --train_batch_size=32
+    --num_train_epochs=4.0   \
     --output_dir=./output/ChinaDaily/bert   \
+    --bilstm=False   \
+    --crf_only=False
+```
+
+2. BiLSTM / BiLSTM + CRF
+```bash
+bash run_bilstm_ner.sh
+```
+
+```shell
+python blstm_ner.py\
+    --data_dir=./data/ChinaDaily   \
+    --output_dir=./output/ChinaDaily/blstm_crf/   \
+    --vocab_file=./data/wiki/char2id.pkl   \
+    --embedding_file=./data/wiki/char2vec.txt   \
+    --embedding_source=./data/wiki/wiki_100.utf8.txt   \
+    --lr=0.001   \
+    --num_train_epochs=25   \
+    --batch_size=64   \
+    --random_embedding=False   \
+    --CRF=True   \
+    --mode=train
 ```
 
 
 ## 应用TODO
 
-- [ ] 根据预测输出的标签，抽取目标实体；
-- [ ] OOV(Out of vocabulary)的问题，有实验证明BERT的效果较好；
+- [ ] 根据预测输出的标签, 抽取目标实体；
+- [ ] OOV(Out of vocabulary)的问题, 有实验证明BERT的效果较好；
 - [ ] transfer learning 迁移学习 ；
 
 

@@ -242,7 +242,7 @@ class NerProcessor(DataProcessor):
         based on ChinaDaily corpus
         'X' is used to represent "##eer","##soo" and char not in vocab!
         '''
-        return ["X", "B-LOC", "I-LOC", "B-PER", "I-PER", "B-ORG", "I-ORG", "O", "[CLS]"]
+        return ["X", "B-LOC", "I-LOC", "B-PER", "I-PER", "B-ORG", "I-ORG", "O", "[CLS]", "[SEP]"]
 
 
 def convert_single_example(ex_index, example, label_list, max_seq_length, tokenizer, mode):
@@ -281,8 +281,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
     # only Account for [CLS] with "- 1".
     # account for ending signal [SEP], with "- 2"
     if len(tokens) >= max_seq_length - 1:
-        tokens = tokens[0: max_seq_length - 1]
-        labels = labels[0: max_seq_length - 1]
+        tokens = tokens[0: max_seq_length - 2]
+        labels = labels[0: max_seq_length - 2]
     ntokens = []
     segment_ids = []
     label_ids = []
@@ -300,9 +300,9 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
     or if add "[SEP]" the model even will cause problem, special the crf layer was used.
     '''
     # endinging signal [SEP]
-    # ntokens.append("[SEP]")
-    # segment_ids.append(0)
-    # label_ids.append(label_map["[SEP]"])
+    ntokens.append("[SEP]")
+    segment_ids.append(0)
+    label_ids.append(label_map["[SEP]"])
 
     input_ids = tokenizer.convert_tokens_to_ids(ntokens)
     input_mask = [1] * len(input_ids)
@@ -323,11 +323,6 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
         logging.info("guid: %s" % (example.guid))
         logging.info("tokens: %s" % " ".join(
             [tokenization.printable_text(x) for x in tokens]))
-        logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-        logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
-        logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-        logging.info("label_ids: %s" % " ".join([str(x) for x in label_ids]))
-        logging.info("ntokens: %s" % " ".join([str(x) for x in ntokens]))
 
     feature = InputFeatures(
         input_ids=input_ids,
@@ -651,12 +646,11 @@ def main(_):
         per = seq2entity.get_per_entity()
         loc = seq2entity.get_loc_entity()
         org = seq2entity.get_org_entity()
-        output_per = os.path.join(FLAGS.data_dir, 'per.txt')
-        output_loc = os.path.join(FLAGS.data_dir, 'loc.txt')
-        output_org = os.path.join(FLAGS.data_dir, 'org.txt')
-        np.savetxt(output_per, np.array(per), fmt="%s")
-        np.savetxt(output_loc, np.array(loc), fmt="%s")
-        np.savetxt(output_org, np.array(org), fmt="%s")
+        return {
+            'per': per,
+            'loc': loc,
+            'org': org
+        }
 
 
 if __name__ == "__main__":

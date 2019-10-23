@@ -2,8 +2,8 @@
 国 I-LOC
 的 O
 华 B-PER
-莱 B-PER
-士 B-PER
+莱 I-PER
+士 I-PER
 ， O
 我 O
 和 O
