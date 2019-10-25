@@ -13,4 +13,4 @@ python predict_bert.py\
     --output_dir=../output/ChinaDaily/bert_crf/   \
     --bilstm=True   \
     --crf_only=True \
-    --raw_input=True
+    --raw_input=False

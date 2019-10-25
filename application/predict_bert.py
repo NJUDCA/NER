@@ -22,7 +22,8 @@ from application.seq2entity import Seq2Entity
 import tensorflow as tf
 import pickle
 import logging
-import numpy as np
+import json
+import codecs
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 '''
@@ -629,7 +630,10 @@ def main(_):
         output_predict_file = os.path.join(FLAGS.data_dir, "label_predict.txt")
         token_seq = []
         label_seq = []
+
         with open(output_predict_file,'w') as wf:
+            token_sent = []
+            label_sent = []
             for i, prediction in enumerate(predictions):
                 token = batch_tokens[i]
                 if prediction == 0:
@@ -637,20 +641,32 @@ def main(_):
                 predict = id2label[prediction]
                 if token in ['[CLS]', '[SEP]']:
                     continue
-                token_seq.append(token)
-                label_seq.append(predict)
+                if token in ['.', '。', '!', '！', '?', '？']:
+                    token_seq.append(token_sent)
+                    label_seq.append(label_sent)
+                    token_sent = []
+                    label_sent = []
+                else:
+                    token_sent.append(token)
+                    label_sent.append(predict)
                 line = "{}\t{}\n".format(token, predict)
                 wf.write(line)
-
-        seq2entity = Seq2Entity(token_seq, label_seq)
-        per = seq2entity.get_per_entity()
-        loc = seq2entity.get_loc_entity()
-        org = seq2entity.get_org_entity()
-        return {
-            'per': per,
-            'loc': loc,
-            'org': org
-        }
+        
+        
+        output_entity_file = os.path.join(FLAGS.data_dir, "entity_bert.txt")
+        with open(output_entity_file, 'w', encoding='utf-8') as fw:
+            total_sent = len(token_seq)
+            for i, (token_sent, label_sent) in enumerate(zip(token_seq, label_seq), 1):
+                seq = Seq2Entity(token_sent, label_sent)
+                entity = seq.get_entity()
+                print('-- {}/{} -- {}'.format(i, total_sent, ''.join(token_sent)))
+                for key, value in entity.items():
+                    if len(value) > 0:
+                        print('{} {}:\t{}'.format(len(value), key, ' '.join([str(item) for item in value])))
+                        for item in value:
+                            fw.write('{}\t{}\n'.format(str(item), key))
+                print('\n')
+        
 
 
 if __name__ == "__main__":

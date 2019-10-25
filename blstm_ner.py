@@ -1,4 +1,9 @@
-"""Created by PeterLee, on Dec. 17."""
+#! usr/bin/env python3
+# -*- coding:utf-8 -*-
+"""
+@Author: xiongxin
+Adjust code based on PeterLee.
+"""
 import tensorflow as tf
 import numpy as np
 import os
@@ -108,31 +113,32 @@ def main():
             saver.restore(sess, ckpt_file)
             predict_data = []
             token_list = []
-            if args.raw_input:
-                raw_input = input('Please input your text to extract entities:')
-                token_list = list(raw_input.replace(' ', "O").strip())
+            if args.raw_input is True:
+                txt_input = input('Please input your text to extract entities:')
+                token_list = list(txt_input.replace(' ', "O").strip())
                 tag_list = ['O'] * len(token_list)
                 predict_data.append((token_list, tag_list))
             else:
-                Txt2Seq(args.data_dir, 'demo.txt')
+                Txt2Seq(args.data_dir, 'sample.txt')
                 predict_data = read_corpus(os.path.join(args.data_dir, 'predict.txt'))
-                for (token_, _) in predict_data:
-                    token_list.extend(token_)
-            logging.info('{} predict examples'.format(len(predict_data)))
             tag_predict = model.demo_one(sess, predict_data)
-            logging.info('tokens: {}'.format(' '.join([str(token) for token in token_list])))
-            logging.info('tags: {}'.format(' '.join([str(tag) for tag in tag_predict])))
-
-            seq2entity = Seq2Entity(token_list, tag_predict)
-            per = seq2entity.get_per_entity()
-            loc = seq2entity.get_loc_entity()
-            org = seq2entity.get_org_entity()
-            return {
-                'per': per,
-                'loc': loc,
-                'org': org
-            }
-
+            
+            token_seq = []
+            for (token_, _) in predict_data:
+                token_seq.append(token_)
+            output_entity_file = os.path.join(args.data_dir, "entity_blstm.txt")
+            with open(output_entity_file, 'w', encoding='utf-8') as fw:
+                total_sent = len(token_seq)
+                for i, (token_sent, label_sent) in enumerate(zip(token_seq, tag_predict), 1):
+                    seq = Seq2Entity(token_sent, label_sent)
+                    entity = seq.get_entity()
+                    print('-- {}/{} -- {}'.format(i, total_sent, ''.join(token_sent)))
+                    for key, value in entity.items():
+                        if len(value) > 0:
+                            print('{} {}:\t{}'.format(len(value), key, ' '.join([str(item) for item in value])))
+                            for item in value:
+                                fw.write('{}\t{}\n'.format(str(item), key))
+                    print('\n')
 
 
 if __name__ == "__main__":

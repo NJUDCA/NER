@@ -175,7 +175,7 @@ class BiLSTM_CRF(object):
             label2tag[label] = tag
         tag_list = []
         for label_ in label_list:
-            tag_list.extend([label2tag[label] for label in label_])
+            tag_list.append([label2tag[label] for label in label_])
         return tag_list
 
     def run_one_epoch(self, sess, train, dev, tag2label, epoch, saver):
