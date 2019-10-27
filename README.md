@@ -159,7 +159,9 @@ python blstm_ner.py\
 
 ### 输入新文本, 抽取目标实体
 
-若从文件读入文本，文件默认为`/data_dir/sample.txt`; 若从控制台交互输入文本，设置raw_input=True.
+若从文件读入文本，文件默认为`/data_dir/sample.txt`;
+若从控制台交互输入文本，设置raw_input=True.
+
 (Attention: args 不支持 raw_input=False，只要加上该参数就会设置为True)
 
 1. BERT / BERT + CRF / BERT + BiLSTM + CRF
@@ -169,7 +171,9 @@ bash run_predict.sh
 ```
 
 `data_dir`不是训练语料的目录, 而是应用文本的目录, 最好分开, 最终输出的实体也会以文本文件的形式保存在这里.
+
 `init_checkpoint`是训练好的模型，预测的时候会从该文件里重加载神经网络模型的参数.
+
 `output_dir`是训练模型的保存路径，这里只是为了存储预测的日志文件`predict.log`.
 
 
