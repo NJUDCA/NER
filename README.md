@@ -70,7 +70,7 @@ BiLSTM是Bi-directional Long Short-Term Memory的缩写, 是由前向LSTM与后�
 2. 然后经过两个双向LSTM层进行编码, 编码后加入dense全连接层；
 3. 最后输入CRF层进行序列标注。
 
-在这里, 我们使用开源的基于中文维基百科训练的100维的字向量作为embedding层, 在`blstm_ner`使用`tag2label`定义标签类别, 视具体任务而定。
+在这里, 我们使用开源的基于中文维基百科训练的100维的字向量作为embedding层（实验证明随机初始化字向量，在同领域的验证集也能达到较好的效果）， 在`blstm_ner`使用`tag2label`定义标签类别, 视具体任务而定。
 
 在训练BiLSTM_CRF模型的过程中发现, 设置`learning_rate=0.001`, `batch_size=64`的收敛效率较好, 在第十几个epoch就达到了较好的效果。
 
@@ -89,7 +89,7 @@ batch_size一般从128开始上下浮动。一个batch即批训练一次神经�
 return ["X",  "B-LOC",  "I-LOC",  "B-PER",  "I-PER",  "B-ORG",  "I-ORG",  "O",  "[CLS]",  "[SEP]"]
 ```
 
-在训练Bert模型的过程中, 使用的是开源模型的默认参数`learning_rate=2e-5`, `batch_size=32`, 模型在验证集上的效果已经很好, 所以没有再调参数。但是加上BiLSTM层后, 在相同训练轮次(num_train_epochs=4.0)的情况下, 收敛速度减慢, 模型的训练效果不如单独的Bert, 可能是由于学习率设置过小。
+在训练Bert模型的过程中, 使用的是开源模型的默认参数`learning_rate=2e-5`, `batch_size=32`, 模型在验证集上的效果已经很好, 所以没有再调参数。但是加上BiLSTM层后, 在相同训练轮次(num_train_epochs=4.0)的情况下, 收敛速度减慢, 模型的训练效果不如单独的Bert, 可能是由于学习率设置过小（但是在调参过程中发现，太大的学习率不适合BERT）。
 
 ## 实验
 
@@ -155,11 +155,38 @@ python blstm_ner.py\
 ```
 
 
-## 应用TODO
+## 应用
 
-- [ ] 根据预测输出的标签, 抽取目标实体；
-- [ ] OOV(Out of vocabulary)的问题, 有实验证明BERT的效果较好；
-- [ ] transfer learning 迁移学习 ；
+### 输入新文本, 抽取目标实体
+
+若从文件读入文本，文件默认为`/data_dir/sample.txt`; 若从控制台交互输入文本，设置raw_input=True.
+(Attention: args 不支持 raw_input=False，只要加上该参数就会设置为True)
+
+1. BERT / BERT + CRF / BERT + BiLSTM + CRF
+```bash
+cd application
+bash run_predict.sh
+```
+
+`data_dir`不是训练语料的目录, 而是应用文本的目录, 最好分开, 最终输出的实体也会以文本文件的形式保存在这里.
+`init_checkpoint`是训练好的模型，预测的时候会从该文件里重加载神经网络模型的参数.
+`output_dir`是训练模型的保存路径，这里只是为了存储预测的日志文件`predict.log`.
+
+
+2. BiLSTM / BiLSTM + CRF
+```shell
+python blstm_ner.py\
+    --data_dir=./data/ywsz/   \
+    --output_dir=./output/ChinaDaily/blstm_crf/   \
+    --vocab_file=./data/wiki/char2id.pkl   \
+    --embedding_file=./data/wiki/char2vec.txt   \
+    --CRF=True   \
+    --mode=predict   \
+    --raw_input=False
+```
+
+- [ ] OOV(Out of vocabulary)的问题, 有实验证明BERT的效果较好，有待验证
+- [ ] transfer learning 迁移学习 
 
 
 
