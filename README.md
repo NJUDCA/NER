@@ -103,8 +103,8 @@ return ["X",  "B-LOC",  "I-LOC",  "B-PER",  "I-PER",  "B-ORG",  "I-ORG",  "O",  
 ### 注意
 - 在CPU上运行可能会卡机, 模型训练耗时约day+
 - [Google Colab](https://colab.research.google.com) 提供了免费的GPU, 需要科学上网
+- 由于Git托管体积大的文件不方便，相关的训练集、词向量、预训练模型、下游任务训练模型已上传到网盘
 
-**由于Git托管体积大的文件不方便，相关的训练集、词向量、预训练模型、下游任务训练模型已上传到网盘**
 [链接](https://pan.baidu.com/s/1zVR7paWVE7WL4L87BDV6rA)  提取码: h8st 
 
 ### 模型训练
