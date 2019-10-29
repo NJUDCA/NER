@@ -100,12 +100,14 @@ return ["X",  "B-LOC",  "I-LOC",  "B-PER",  "I-PER",  "B-ORG",  "I-ORG",  "O",  
 - numpy >= 1.14.3
 - Anaconda (recommended on Windows)
 
-### Tips
+### 注意
 - 在CPU上运行可能会卡机, 模型训练耗时约day+
 - [Google Colab](https://colab.research.google.com) 提供了免费的GPU, 需要科学上网
 
+**由于Git托管体积大的文件不方便，相关的训练集、词向量、预训练模型、下游任务训练模型已上传到网盘**
+[链接](https://pan.baidu.com/s/1zVR7paWVE7WL4L87BDV6rA)  提取码: h8st 
 
-### How to run
+### 模型训练
 cmd.exe不支持sh脚本, 可在git bash上执行, 或在控制台带参数运行, 对于不同的语料、输出和参数, 需要相应地修改sh脚本
 
 1. BERT / BERT + CRF / BERT + BiLSTM + CRF
