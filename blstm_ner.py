@@ -41,7 +41,7 @@ parser.add_argument('--batch_size', type=int, default=64, help='sample of each m
 parser.add_argument('--num_train_epochs', type=int, default=25, help='epoch of training')
 parser.add_argument('--lstm_size', type=int, default=300, help='dim of hidden state')
 parser.add_argument('--optimizer', type=str, default='Adam', help='Adam/Adadelta/Adagrad/RMSProp/Momentum/SGD')
-parser.add_argument('--CRF', type=bool, default=True, help='use CRF at the top layer. if False, use Softmax')
+parser.add_argument('--CRF', type=bool, default=False, help='use CRF at the top layer. if False, use Softmax')
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 parser.add_argument('--clip', type=float, default=5.0, help='gradient clipping')
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout keep_prob')
@@ -62,8 +62,10 @@ def main():
 
     # get char embeddings
     if args.random_embedding:
+        logging.info('use random char embeddings')
         embeddings = random_embedding(word2id, args.embedding_dim)
     else:
+        logging.info('use pretrained char embeddings')
         embeddings = np.loadtxt(args.embedding_file)
     logging.info('shape of char embeddings: {}'.format(embeddings.shape))
     

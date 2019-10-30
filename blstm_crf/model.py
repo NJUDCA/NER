@@ -251,7 +251,10 @@ class BiLSTM_CRF(object):
 
         else:
             # Softmax
-            label_list = sess.run(self.labels_softmax_, feed_dict=feed_dict)
+            logits = sess.run(self.labels_softmax_, feed_dict=feed_dict)
+            label_list = []
+            for logit, seq_len in zip(logits, seq_len_list):
+                label_list.append(logit[:seq_len])
             return label_list, seq_len_list
 
     def evaluate(self, label_list, seq_len_list, data, epoch=None):

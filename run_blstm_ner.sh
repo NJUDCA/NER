@@ -8,9 +8,8 @@ python blstm_ner.py\
     --embedding_file=./data/wiki/char2vec.txt   \
     --embedding_source=./data/wiki/wiki_100.utf8.txt   \
     --lr=0.001   \
-    --num_train_epochs=25   \
+    --num_train_epochs=40   \
     --batch_size=64   \
-    --random_embedding=False   \
     --CRF=True   \
     --mode=train
 
