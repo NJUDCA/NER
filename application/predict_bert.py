@@ -128,8 +128,11 @@ flags.DEFINE_integer('num_layers', 1,
 flags.DEFINE_string('cell', 'lstm',
                     'which rnn cell used')
 
-flags.DEFINE_bool('raw_input', True,
+flags.DEFINE_bool('raw_input', False,
                   'default to input text for prediction')
+
+flags.DEFINE_string('file_input', None,
+                    'text file for prediction')
 
 
 class InputExample(object):
@@ -473,9 +476,9 @@ def create_model(bert_config, is_training, input_ids, input_mask,
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu, use_one_hot_embeddings):
     def model_fn(features, labels, mode, params):
-        logging.info("*** Features ***")
-        for name in sorted(features.keys()):
-            logging.info("  name = {}, shape = {}".format(name, features[name].shape))
+        # logging.info("*** Features ***")
+        # for name in sorted(features.keys()):
+        #     logging.info("  name = {}, shape = {}".format(name, features[name].shape))
         input_ids = features["input_ids"]
         input_mask = features["input_mask"]
         segment_ids = features["segment_ids"]
@@ -501,11 +504,11 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
         logging.info("**** Trainable Variables ****")
 
-        for var in vars:
-            init_string = ""
-            if var.name in initialized_variable_names:
-                init_string = ", *INIT_FROM_CKPT*"
-            logging.info("  name = {}, shape = {} {}".format(var.name, var.shape, init_string))
+        # for var in vars:
+        #     init_string = ""
+        #     if var.name in initialized_variable_names:
+        #         init_string = ", *INIT_FROM_CKPT*"
+        #     logging.info("  name = {}, shape = {} {}".format(var.name, var.shape, init_string))
 
         output_spec = None
 
@@ -517,8 +520,6 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
 
 def main(_):
-    logging.info(str(FLAGS))
-
     processors = {
         "ner": NerProcessor
     }
@@ -584,8 +585,8 @@ def main(_):
 
     if FLAGS.do_predict:
         if FLAGS.raw_input:
-            raw_input = input('Please input your text to extract entities:')
-            lines_predict = list(raw_input.replace(' ', "O").strip())
+            txt_input = input('Please input your text to extract entities:')
+            lines_predict = list(txt_input.replace(' ', "O").strip())
             label_predict = ['O'] * len(lines_predict)
             lines = []
             l = ' '.join([label for label in label_predict if len(label) > 0])
@@ -593,7 +594,8 @@ def main(_):
             lines.append([l,w])
             predict_examples = processor._create_example(lines, 'test')
         else:
-            Txt2Seq(FLAGS.data_dir, 'sample.txt')
+            if FLAGS.file_input:
+                Txt2Seq(FLAGS.data_dir, FLAGS.file_input, FLAGS.max_seq_length, lang='zn')
             predict_examples = processor.get_predict_examples(FLAGS.data_dir)
 
         with open(FLAGS.output_dir + '/label2id.pkl', 'rb') as rf:
@@ -601,7 +603,7 @@ def main(_):
             id2label = {value: key for key, value in label2id.items()}
 
         predict_file = os.path.join(FLAGS.data_dir, "predict.tf_record")
-        batch_tokens, batch_labels = file_based_convert_examples_to_features(
+        batch_tokens, _ = file_based_convert_examples_to_features(
             predict_examples, label_list, FLAGS.max_seq_length, tokenizer, predict_file, mode="test")
 
         logging.info("***** Running prediction*****")
@@ -631,7 +633,7 @@ def main(_):
         token_seq = []
         label_seq = []
 
-        with open(output_predict_file,'w') as wf:
+        with open(output_predict_file, 'w+', encoding='UTF-8') as wf:
             token_sent = []
             label_sent = []
             for i, prediction in enumerate(predictions):
@@ -641,7 +643,7 @@ def main(_):
                 predict = id2label[prediction]
                 if token in ['[CLS]', '[SEP]']:
                     continue
-                if token in ['.', '。', '!', '！', '?', '？']:
+                if token in ['。', '！', '？']:
                     token_seq.append(token_sent)
                     label_seq.append(label_sent)
                     token_sent = []
@@ -653,19 +655,20 @@ def main(_):
                 wf.write(line)
         
         
-        output_entity_file = os.path.join(FLAGS.data_dir, "entity_bert.txt")
-        with open(output_entity_file, 'w', encoding='utf-8') as fw:
+        output_entity_file = os.path.join(FLAGS.data_dir, "entity_{}.txt".format(selected_model))
+        with open(output_entity_file, 'w+', encoding='utf-8') as fw:
             total_sent = len(token_seq)
             for i, (token_sent, label_sent) in enumerate(zip(token_seq, label_seq), 1):
                 seq = Seq2Entity(token_sent, label_sent)
                 entity = seq.get_entity()
-                print('-- {}/{} -- {}'.format(i, total_sent, ''.join(token_sent)))
+                if i < 20:
+                    print('-- {}/{} -- {}'.format(i, total_sent, ''.join(token_sent)))
                 for key, value in entity.items():
                     if len(value) > 0:
-                        print('{} {}:\t{}'.format(len(value), key, ' '.join([str(item) for item in value])))
+                        if i < 20:
+                            print('{} {}:\t{}'.format(len(value), key, ' '.join([str(item) for item in value])))
                         for item in value:
-                            fw.write('{}\t{}\n'.format(str(item), key))
-                print('\n')
+                            fw.write('{}\t{}\t{}\n'.format(str(i), key, str(item)))
         
 
 
@@ -678,7 +681,8 @@ if __name__ == "__main__":
         'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
         'datefmt': '%Y-%m-%d %H:%M:%S',
     }
-    FILE_NAME = os.path.join(FLAGS.output_dir, 'predict.log')
+    selected_model = FLAGS.output_dir.strip().split('/')[-2]
+    FILE_NAME = os.path.join(FLAGS.data_dir, 'predict_{}.log'.format(selected_model))
     logging.basicConfig(
         handlers=[logging.FileHandler(FILE_NAME, encoding="utf-8", mode='a')],
         level=logging.INFO,
