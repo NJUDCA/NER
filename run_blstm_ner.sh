@@ -21,5 +21,4 @@ python blstm_ner.py\
     --embedding_file=./data/wiki/char2vec.txt   \
     --CRF=True   \
     --mode=predict   \
-    --raw_input=False
 

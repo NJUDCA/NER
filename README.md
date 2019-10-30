@@ -149,9 +149,8 @@ python blstm_ner.py\
     --embedding_file=./data/wiki/char2vec.txt   \
     --embedding_source=./data/wiki/wiki_100.utf8.txt   \
     --lr=0.001   \
-    --num_train_epochs=25   \
+    --num_train_epochs=40   \
     --batch_size=64   \
-    --random_embedding=False   \
     --CRF=True   \
     --mode=train
 ```
@@ -161,10 +160,17 @@ python blstm_ner.py\
 
 ### 输入新文本, 抽取目标实体
 
-若从文件读入文本，文件默认为`/data_dir/sample.txt`;
-若从控制台交互输入文本，设置raw_input=True.
+若从文件读入文本，设置`file_input=<file_name under data_dir>`，默认在`txt2seq.py`中以`r'([。？！])'`切割句子，如果切割后序列长度仍超出128-2，则继续以`；`或`，`切割。
 
-(Attention: args 不支持 raw_input=False，只要加上该参数就会设置为True)
+若从控制台交互输入文本，设置`raw_input=True`，长度超过128-2会自动截断（尝试训练max_seq_length=256的模型但是提示内存溢出）。
+
+在预测过程中，可能会出现字典文件`vocab.txt`未包含的字符，以`[UNK]`输出，可手动更新`[unused1~99]`另存为`vocab_update`文件。
+
+目标实体以句子为单位输出。
+
+另外，可在`seq2entity.py`中加入规则，抽取其他类型的实体，如《》。
+
+(Attention: args 不支持 raw_input=False，只要加上该参数就会设置为True，所以还是flags更灵活一点吧)
 
 1. BERT / BERT + CRF / BERT + BiLSTM + CRF
 ```bash
@@ -172,11 +178,11 @@ cd application
 bash run_predict.sh
 ```
 
-`data_dir`不是训练语料的目录, 而是应用文本的目录, 最好分开, 最终输出的实体也会以文本文件的形式保存在这里.
+`data_dir`不是训练语料的目录，而是应用文本的目录，最好分开，最终输出的实体文件和日志文件也会保存在这里.
 
 `init_checkpoint`是训练好的模型，预测的时候会从该文件里重加载神经网络模型的参数.
 
-`output_dir`是训练模型的保存路径，这里只是为了存储预测的日志文件`predict.log`.
+`output_dir`是训练模型的保存路径，用来重载某些依赖文件，如`label2id.pkl`.
 
 
 2. BiLSTM / BiLSTM + CRF
@@ -188,7 +194,6 @@ python blstm_ner.py\
     --embedding_file=./data/wiki/char2vec.txt   \
     --CRF=True   \
     --mode=predict   \
-    --raw_input=False
 ```
 
 - [ ] OOV(Out of vocabulary)的问题, 有实验证明BERT的效果较好，有待验证
