@@ -34,7 +34,7 @@ def max_len_events():
             if len(event) > max_seq_len:
                 fw_long.write('{:05d}\t{}\t{}\n'.format(i, len(event), event))
 
-def get_UNKs():
+def get_comp_unk():
     input_file = '../data/ywsz/events/predict.txt'
     predict_file = '../data/ywsz/events/label_predict.txt'
     output_file = '../data/ywsz/events/label_predict_comp.txt'
@@ -43,16 +43,15 @@ def get_UNKs():
     unk_list = []
 
     with open(input_file, encoding='UTF-8') as fr:
+        # this would skip \n row
         data = np.loadtxt(fr, dtype=np.str)
         origianl_tokens = data[:, 0]
     
-    with open(predict_file) as fr:
+    with open(predict_file, encoding='UTF-8') as fr:
         data = np.loadtxt(fr, dtype=np.str)
         predict_tokens = data[:, 0]
     
     for i, token in enumerate(origianl_tokens):
-        if len(token) == 0:
-            continue
         if i < len(predict_tokens):
             predict_token = predict_tokens[i]
         else:
@@ -69,10 +68,9 @@ def get_UNKs():
             fw_unk.write('{}\t{}\n'.format(i, unk))
             
     fw_output.close()
-
-
+    
 
 if __name__ == "__main__":
     # get_events()
     # max_len_events()
-    get_UNKs()
+    get_comp_unk()

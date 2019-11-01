@@ -3,6 +3,29 @@ import os
 import logging
 
 
+class cut_max_seq:
+
+    def __init__(self):
+        self.max_seq_len = 128 - 2
+        self.token_seq = []
+        self.label_seq = []
+
+    def cut(self, sent, labels):
+        if len(sent) > self.max_seq_len:
+            target = sent[:self.max_seq_len].rfind('；')
+            if target == -1:
+                target = sent[:self.max_seq_len].rfind('，')
+            self.token_seq.append(sent[:target+1])
+            self.label_seq.append(labels[:target+1])
+            self.cut(sent[target+1:], labels[target+1:])
+        else:
+            self.token_seq.append(sent)
+            self.label_seq.append(labels)
+
+    def get_cut_seqs(self):
+        return self.token_seq, self.label_seq
+
+
 class Txt2Seq:
     def __init__(self, data_dir, txt_file, max_seq_len=None, lang=None):
         self.lang = lang
@@ -24,26 +47,22 @@ class Txt2Seq:
             split_pattern = r'([。？！])'
         sentences = re.split(split_pattern, sentences)
         for sent, dot in zip(sentences[0::2], sentences[1::2]):
+            sent = sent + dot
             if self.max_seq_len:
-                self.cut_max_seq(sent, dot)
+                labels = ['O'] * len(sent)
+                seqs = cut_max_seq()
+                seqs.cut(sent, labels)
+                token_seq, _ = seqs.get_cut_seqs()
+                for tokens in token_seq:
+                    self.seqs.append(tokens)
             else:
-                self.seqs.append('{}{}'.format(sent, dot))
-    
-    def cut_max_seq(self, seq, dot):
-        if len(seq) > self.max_seq_len:
-            target = seq[:self.max_seq_len].rfind('；')
-            if target == -1:
-                target = seq[:self.max_seq_len].rfind('，')
-            self.seqs.append(seq[:target+1])
-            self.cut_max_seq(seq[target+1:], dot)
-        else:
-            self.seqs.append('{}{}'.format(seq, dot))
+                self.seqs.append(sent)
      
     def sen2seq(self, output):
         with open(output, 'w+', encoding='UTF-8') as f:
             for sent in self.seqs:
                 if len(sent) > self.max_seq_len:
-                    raise ValueError('input seq length out of max_seq_length: {}'.format(sent))
+                    raise ValueError('input seq length {} out of max_seq_length: {}'.format(len(sent), sent))
                 for char in sent:
                     if len(char.strip(' ')) > 0:
                         f.write('{} {}\n'.format(char, 'O'))

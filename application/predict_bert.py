@@ -643,16 +643,15 @@ def main(_):
                 predict = id2label[prediction]
                 if token in ['[CLS]', '[SEP]']:
                     continue
+                wf.write("{}\t{}\n".format(token, predict))
+                token_sent.append(token)
+                label_sent.append(predict)
                 if token in ['。', '！', '？']:
                     token_seq.append(token_sent)
                     label_seq.append(label_sent)
                     token_sent = []
                     label_sent = []
-                else:
-                    token_sent.append(token)
-                    label_sent.append(predict)
-                line = "{}\t{}\n".format(token, predict)
-                wf.write(line)
+                    wf.write('\n')
         
         
         output_entity_file = os.path.join(FLAGS.data_dir, "entity_{}.txt".format(selected_model))
@@ -661,14 +660,17 @@ def main(_):
             for i, (token_sent, label_sent) in enumerate(zip(token_seq, label_seq), 1):
                 seq = Seq2Entity(token_sent, label_sent)
                 entity = seq.get_entity()
-                if i < 20:
+                entity_all = []
+                if total_sent < 5:
                     print('-- {}/{} -- {}'.format(i, total_sent, ''.join(token_sent)))
                 for key, value in entity.items():
                     if len(value) > 0:
-                        if i < 20:
-                            print('{} {}:\t{}'.format(len(value), key, ' '.join([str(item) for item in value])))
-                        for item in value:
-                            fw.write('{}\t{}\t{}\n'.format(str(i), key, str(item)))
+                        if total_sent < 5:
+                            print('{} {}:\t{}'.format(len(value), key, ' '.join([str(item[0]) for item in value])))
+                        for (item, start, end) in value:
+                            entity_all.append((key, str(item), start, end))
+                for entity_one in sorted(entity_all, key=lambda x: x[2]):
+                    fw.write('{:05d}\t{}\n'.format(i, '\t'.join(str(item) for item in entity_one)))
         
 
 
