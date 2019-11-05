@@ -562,7 +562,8 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 def main(_):
     # tf.logging.set_verbosity(tf.logging.INFO)
 
-    logging.info(str(FLAGS))
+    for name, value in FLAGS.__flags.items():
+        logging.info('{} = {}'.format(name, value.value)) 
 
     processors = {
         "ner": NerProcessor

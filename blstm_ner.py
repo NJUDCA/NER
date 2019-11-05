@@ -98,8 +98,8 @@ def main():
         test_data = read_corpus(os.path.join(args.data_dir, 'dev.txt'))
         logging.info('{} test examples'.format(len(test_data)))
 
-        ckpt_file = tf.train.latest_checkpoint(model_path)
-        logging.info('last checkpoint file: {}'.format(ckpt_file))
+        ckpt_file = args.ckpt_model if os.path.exists(args.ckpt_model) else tf.train.latest_checkpoint(model_path)
+        logging.info('trained checkpoint file: {}'.format(ckpt_file))
         paths['model_path'] = ckpt_file
         model = BiLSTM_CRF(args, embeddings, tag2label, word2id, paths)
         model.build_graph()
@@ -144,7 +144,7 @@ def main():
 
 
 if __name__ == "__main__":
-    if not os.path.exists(args.output_dir):
+    if args.output_dir and not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     LOG_SETTINGS = {
         'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
@@ -156,7 +156,8 @@ if __name__ == "__main__":
         level=logging.INFO,
         **LOG_SETTINGS
     )
-    logging.info(str(args))
+    for name, value in vars(args).items():
+        logging.info('{} = {}'.format(name, value))
     main()
     
 

@@ -197,7 +197,7 @@ python blstm_ner.py\
 ```
 
 - [ ] OOV(Out of vocabulary)的问题, 有实验证明BERT的效果较好，有待验证
-- [ ] transfer learning 迁移学习 
+- [ ] incremental learning 
 
 
 

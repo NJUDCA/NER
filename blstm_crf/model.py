@@ -261,6 +261,9 @@ class BiLSTM_CRF(object):
         label_true = []
         label_pred = []
         report = None
+        target_names = []
+        for key, _ in sorted(self.tag2label.items(), key=lambda item: item[1]):
+            target_names.append(key)
         for labels_, (sent, tags) in zip(label_list, data):
             labels = [self.tag2label[tag] for tag in tags ]
             if len(labels_) != len(sent):
@@ -269,7 +272,7 @@ class BiLSTM_CRF(object):
             else:
                 label_pred.extend(labels_)
                 label_true.extend(labels)
-        report = classification_report(label_true, label_pred, target_names=list(self.tag2label.keys()), digits=4)
+        report = classification_report(label_true, label_pred, target_names=target_names, digits=4)
         
         epoch_num = str(epoch + 1) if epoch != None else 'test'
         logging.info('classification_report for {}\n{}'.format(epoch_num, report))
