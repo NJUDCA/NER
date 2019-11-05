@@ -37,9 +37,9 @@ class BiLSTM_CRF:
     def _construct_cell(self):
         cell = None
         if self.cell_type == 'lstm':
-            cell = tf.nn.rnn_cell.LSTMCell(self.lstm_size, name='basic_lstm_cell')
+            cell = rnn.LSTMCell(self.lstm_size)
         elif self.cell_type == 'gru':
-            cell = tf.nn.rnn_cell.GRUCell(self.lstm_size)
+            cell = rnn.GRUCell(self.lstm_size)
 
         if self.dropout_rate is not None:
             cell = rnn.DropoutWrapper(cell, output_keep_prob=self.dropout_rate)
