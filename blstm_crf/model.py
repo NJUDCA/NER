@@ -7,6 +7,7 @@ from tensorflow.contrib import rnn
 from tensorflow.contrib import crf
 from processor.data import pad_sequences, batch_yield
 from sklearn.metrics import classification_report
+from metrics import conlleval
 import logging
 
 
@@ -162,8 +163,29 @@ class BiLSTM_CRF(object):
         with tf.Session() as sess:
             logging.info('=========== testing ===========')
             saver.restore(sess, self.model_path)
-            label_list, seq_len_list = self.dev_one_epoch(sess, test)
-            self.evaluate(label_list, seq_len_list, test)
+            label_list, _ = self.dev_one_epoch(sess, test)
+            self.evaluate(label_list, test)
+            # label2tag = {}
+            # for tag, label in self.tag2label.items():
+                # label2tag[label] = tag
+            # tag_list = []
+            # for label_ in label_list:
+                # tag_list.append([label2tag[label] for label in label_])
+            # test_label_file = os.path.join(self.result_path, 'test_label.txt')
+            # test_result_file = os.path.join(self.result_path, 'test_result.txt')
+            # with open(test_label_file, 'w+', encoding='utf-8') as fw:
+                # for tags_, (sent, tags) in zip(tag_list, test):
+                    # if len(tags_) != len(sent):
+                        # print(sent)
+                        # print(len(tags_))
+                    # else:
+                        # for token, true_tag, predict_tag in zip(sent, tags, tags_):
+                            # fw.write("{}\t{}\t{}\n".format(token, true_tag, predict_tag))
+            # test_report = conlleval.return_report(test_label_file)
+            # logging.info(''.join(test_report))
+            # with open(test_result_file, 'a+', encoding='UTF-8') as wf:
+                # wf.write(''.join(test_report))
+
 
     def demo_one(self, sess, sent):
         label_list = []
@@ -201,7 +223,7 @@ class BiLSTM_CRF(object):
 
         logging.info('==========validation ==========')
         label_list_dev, seq_len_list_dev = self.dev_one_epoch(sess, dev)
-        self.evaluate(label_list_dev, seq_len_list_dev, dev, epoch)
+        self.evaluate(label_list_dev, dev, epoch)
         logging.info('epoch {} finished'.format(epoch + 1))
 
     def get_feed_dict(self, seqs, labels=None, lr=None, dropout=None):
@@ -257,7 +279,7 @@ class BiLSTM_CRF(object):
                 label_list.append(logit[:seq_len])
             return label_list, seq_len_list
 
-    def evaluate(self, label_list, seq_len_list, data, epoch=None):
+    def evaluate(self, label_list, data, epoch=None):
         label_true = []
         label_pred = []
         report = None

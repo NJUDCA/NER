@@ -11,7 +11,6 @@ class Seq2Entity:
             raise IndexError('length of tokens {} and labels {} are not equal'.format(len(tokens), len(labels)))
         self.length = len(tokens)
         self.sent = ''.join(tokens)
-        logging.info('tokens: {}'.format(self.sent))
     
     def get_entity(self):
         per = self.get_per_entity()
@@ -134,21 +133,3 @@ class Seq2Entity:
             logging.info('{} BOOK: {}'.format(len(BOOK), ' '.join([str(b[0]) for b in BOOK])))
         return BOOK
 
-# unit test
-'''
-token_sent = ['王','子','王','绶','、','王','绅','，','为','将','其','父','文','章','流','传','于','世','，','请',
-            '方','孝','孺', '(', '1','3','5','7','~','1','4','0','2',')','整','理','辑','成','《','华','川','前','集','》',
-            '与','《','华','川','后','集','》','，','方','孝','孺','为','《','后','集','》','作','序','。']
-label_sent = ['B-PER', 'O', 'B-PER', 'I-PER', 'O', 'B-PER', 'I-PER', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
-            'B-PER', 'I-PER', 'I-PER', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B-LOC', 'I-LOC',
-            'O', 'O', 'O', 'O', 'O', 'B-LOC', 'I-LOC', 'O', 'O', 'O', 'O', 'B-PER', 'I-PER', 'I-PER', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O']
-seq = Seq2Entity(token_sent, label_sent)
-entity = seq.get_entity()
-entity_all = []
-for key, value in entity.items():
-    if len(value) > 0:
-        for (item, start, end) in value:
-            entity_all.append((key, str(item), start, end))
-for entity_one in sorted(entity_all, key=lambda x: x[2]):
-    print('{}'.format('\t'.join(str(item) for item in entity_one)))
-'''

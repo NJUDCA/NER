@@ -104,12 +104,20 @@ def calculate(total_cm, num_class):
     precisions = []
     recalls = []
     fs = []
-    for i in range(num_class):
-        rowsum, colsum = np.sum(total_cm[i]), np.sum(total_cm[r][i] for r in range(num_class))
-        precision = total_cm[i][i] / float(colsum+1e-12)
-        recall = total_cm[i][i] / float(rowsum+1e-12)
+    cm = total_cm[2: num_class-1, 2: num_class-1]
+    num_targets = len(cm)
+    for i in range(num_targets):
+        rowsum, colsum = np.sum(cm[i]), np.sum(cm[r][i] for r in range(num_targets))
+        precision = cm[i][i] / float(colsum+1e-12)
+        recall = cm[i][i] / float(rowsum+1e-12)
         f = 2 * precision * recall / (precision + recall+1e-12)
         precisions.append(precision)
         recalls.append(recall)
         fs.append(f)
-    return precisions, recalls, fs
+    TP = np.trace(cm)
+    total = np.sum(cm)
+    acc = TP / float(total)
+    pe = np.dot(np.sum(cm, axis=0), np.sum(cm, axis=1)) / float(total ** 2)
+    po = acc
+    kappa = (po - pe) / (1 - pe)
+    return precisions, recalls, fs, acc, kappa

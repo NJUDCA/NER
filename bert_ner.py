@@ -18,6 +18,7 @@ from bert import optimization
 from bert import tokenization
 from blstm_crf.bilstm_crf_layer import BiLSTM_CRF
 from metrics import tf_metrics
+from metrics import conlleval
 import tensorflow as tf
 import pickle
 import logging
@@ -59,7 +60,7 @@ flags.DEFINE_bool("do_train", True,
 flags.DEFINE_bool("do_eval", True,
                   "Whether to run eval on the dev set.")
 
-flags.DEFINE_bool("do_predict", True,
+flags.DEFINE_bool("do_test", True,
                   "Whether to run the model in inference mode on the test set.")
 
 flags.DEFINE_integer("train_batch_size", 32,
@@ -74,8 +75,8 @@ flags.DEFINE_integer("predict_batch_size", 8,
 flags.DEFINE_float("learning_rate", 5e-5,
                    "The initial learning rate for Adam.")
 
-flags.DEFINE_float("dropout_rate", 0.1,
-                   "The initial learning rate for Adam.")
+flags.DEFINE_float("dropout_rate", None,
+                   "The rate to dropout cells in embedding layer.")
 
 flags.DEFINE_float("num_train_epochs", 3.0,
                    "Total number of training epochs to perform.")
@@ -84,7 +85,7 @@ flags.DEFINE_float("warmup_proportion", 0.1,
                    "Proportion of training to perform linear learning rate warmup for. "
                    "E.g., 0.1 = 10% of training.")
 
-flags.DEFINE_integer("save_checkpoints_steps", 1000,
+flags.DEFINE_integer("save_checkpoints_steps", 1583,
                      "How often to save the model checkpoint.")
 
 flags.DEFINE_integer("iterations_per_loop", 1000,
@@ -121,10 +122,10 @@ flags.DEFINE_integer("num_tpu_cores", 8,
                      "Only used if `use_tpu` is True. Total number of TPU cores to use.")
 
 flags.DEFINE_bool("bilstm", True,
-                  "use bilstm + crf.")
+                  "use bilstm.")
 
-flags.DEFINE_bool("crf_only", True,
-                  "use crf only.")
+flags.DEFINE_bool("crf", True,
+                  "use crf.")
 
 # lstm params
 flags.DEFINE_integer('lstm_size', 128,
@@ -135,14 +136,6 @@ flags.DEFINE_integer('num_layers', 1,
 
 flags.DEFINE_string('cell', 'lstm',
                     'which rnn cell used')
-
-
-LOG_SETTINGS = {
-    'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-    'datefmt': '%Y-%m-%d %H:%M:%S',
-    'filename': FLAGS.output_dir + 'bert_ner.log',
-    'filemode': 'a',
-}
 
 
 class InputExample(object):
@@ -464,10 +457,8 @@ def create_model(bert_config, is_training, input_ids, input_mask,
     # use model.get_sequence_output() to get token-level output
     output_layer = model.get_sequence_output()
 
-    if is_training:
-        output_layer = tf.nn.dropout(output_layer, FLAGS.dropout_rate)
 
-    if FLAGS.bilstm:
+    if FLAGS.bilstm or FLAGS.crf:
         '''
         used = tf.sign(tf.abs(input_ids))
         lengths = tf.reduce_sum(used, reduction_indices=1)
@@ -478,14 +469,16 @@ def create_model(bert_config, is_training, input_ids, input_mask,
 
         bilstm_crf = BiLSTM_CRF(embedded_chars=output_layer, lstm_size=FLAGS.lstm_size, cell_type=FLAGS.cell, num_layers=FLAGS.num_layers, 
                                 dropout_rate=FLAGS.dropout_rate, num_labels=num_labels, max_seq_length=max_seq_length, labels=labels,
-                                lengths=lengths, is_training=is_training, crf_only=FLAGS.crf_only)
-        loss, logits, predict = bilstm_crf.add_bilstm_crf_layer()
+                                lengths=lengths, is_training=is_training, bilstm=FLAGS.bilstm, crf=FLAGS.crf)
+        loss, predict = bilstm_crf.add_bilstm_crf_layer()
     else:
+        if is_training:
+            output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
         logits = hidden2tag(output_layer, num_labels)
         logits = tf.reshape(logits, [-1, FLAGS.max_seq_length, num_labels])
         loss, predict = softmax_layer(logits, labels, num_labels, input_mask)
     
-    return (loss, logits, predict)
+    return (loss, predict)
 
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
@@ -500,7 +493,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         label_ids = features["label_ids"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
-        (total_loss, logits, pred_ids) = create_model(
+        (total_loss, pred_ids) = create_model(
             bert_config, is_training, input_ids, input_mask, segment_ids,
             label_ids, num_labels, use_one_hot_embeddings)
 
@@ -683,33 +676,40 @@ def main(_):
         output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
         output_eval_cm = os.path.join(FLAGS.output_dir, "eval_results_cm.txt")
 
-        with open(output_eval_file, "w") as writer:
+        with open(output_eval_file, "a+", encoding='utf-8') as writer:
             logging.info("***** Eval results *****")
+            writer.write('domain:\n{}\n'.format(FLAGS.data_dir))
+            writer.write('model:\n{}\n'.format(FLAGS.init_checkpoint))
             writer.write('loss:\n{}\n'.format(result['loss']))
             writer.write('global_step:\n{}\n'.format(result['global_step']))
             confusion_matrix = result.get("confusion_matrix", None)
-            np.savetxt(output_eval_cm, confusion_matrix, fmt="%.7f", delimiter='\t', newline='\n')
+            with open(output_eval_cm, "a+", encoding='utf-8') as fw_cm:
+                fw_cm.write('data:\n{}\n'.format(FLAGS.data_dir))
+                fw_cm.write('model:\n{}\n'.format(FLAGS.init_checkpoint))
+                for row in confusion_matrix:
+                    for col in row:
+                        fw_cm.write('{:.1f}\t'.format(col))
+                    fw_cm.write('\n')
             try:
-                precisions, recalls, fs = tf_metrics.calculate(confusion_matrix, len(label_list))
-                logging.info('Precision: {}'.format('\t'.join([str(p) for p in precisions])))
-                logging.info('Recall: {}'.format('\t'.join([str(r) for r in recalls])))
-                logging.info('F1: {}'.format('\t'.join([str(f) for f in fs])))
+                precisions, recalls, fs, acc, kappa = tf_metrics.calculate(confusion_matrix, len(label_list))
                 writer.write('Precision: {}\n'.format('\t'.join([str(p) for p in precisions])))
                 writer.write('Recall: {}\n'.format('\t'.join([str(r) for r in recalls])))
                 writer.write('F1: {}\n'.format('\t'.join([str(f) for f in fs])))
+                writer.write('Acc: {}\n'.format(acc))
+                writer.write('Kappa: {}\n'.format(kappa))
             except Exception as e:
                 logging.error(str(e))
 
-    if FLAGS.do_predict:
+    if FLAGS.do_test:
         with open(FLAGS.output_dir + '/label2id.pkl', 'rb') as rf:
             label2id = pickle.load(rf)
             id2label = {value: key for key, value in label2id.items()}
         predict_examples = processor.get_test_examples(FLAGS.data_dir)
-        predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+        predict_file = os.path.join(FLAGS.output_dir, "test.tf_record")
         batch_tokens, batch_labels = file_based_convert_examples_to_features(
             predict_examples, label_list, FLAGS.max_seq_length, tokenizer, predict_file, mode="test")
 
-        logging.info("***** Running prediction*****")
+        logging.info("***** Running Test*****")
         logging.info("  Num examples = %d", len(predict_examples))
         logging.info("  Batch size = %d", FLAGS.predict_batch_size)
 
@@ -725,11 +725,12 @@ def main(_):
             drop_remainder=predict_drop_remainder)
 
         result = estimator.predict(input_fn=predict_input_fn)
-        output_predict_file = os.path.join(FLAGS.output_dir, "label_test.txt")
+        output_test_file = os.path.join(FLAGS.output_dir, "test_label.txt")
+        result_test_file = os.path.join(FLAGS.output_dir, "test_result.txt")
 
         # here if the tag is "X" means it belong to its before token for convenient evaluate use
-        def Writer(output_predict_file, result, batch_tokens, batch_labels, id2label):
-            with open(output_predict_file,'w') as wf:
+        def Writer(output_test_file, result, batch_tokens, batch_labels, id2label):
+            with open(output_test_file,'w+', encoding='UTF-8') as wf:
                 
                 if FLAGS.bilstm:
                     predictions  = []
@@ -750,7 +751,14 @@ def main(_):
                     #     predict="O"
                     line = "{}\t{}\t{}\n".format(token, true_label, predict)
                     wf.write(line)
-        Writer(output_predict_file, result, batch_tokens, batch_labels, id2label)
+        Writer(output_test_file, result, batch_tokens, batch_labels, id2label)
+
+        test_report = conlleval.return_report(output_test_file)
+        logging.info(''.join(test_report))
+        with open(result_test_file, 'a+', encoding='UTF-8') as wf:
+            wf.write('domain:\n{}\n'.format(FLAGS.data_dir))
+            wf.write('model:\n{}\n'.format(FLAGS.init_checkpoint))
+            wf.write(''.join(test_report))
 
 
 if __name__ == '__main__':
@@ -760,6 +768,15 @@ if __name__ == '__main__':
     flags.mark_flag_as_required("output_dir")
     if not os.path.exists(FLAGS.output_dir):
         tf.gfile.MakeDirs(FLAGS.output_dir)
-    logging.basicConfig(level=logging.INFO, **LOG_SETTINGS)
+    LOG_SETTINGS = {
+        'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+        'datefmt': '%Y-%m-%d %H:%M:%S',
+    }
+    FILE_NAME = os.path.join(FLAGS.output_dir, '{}.log'.format('train' if FLAGS.do_train else 'test'))
+    logging.basicConfig(
+        handlers=[logging.FileHandler(FILE_NAME, encoding="utf-8", mode='a')],
+        level=logging.INFO,
+        **LOG_SETTINGS
+    )
     tf.app.run()
     # tf.compat.v1.app.run()

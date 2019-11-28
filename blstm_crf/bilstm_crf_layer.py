@@ -6,7 +6,7 @@ from tensorflow.contrib.layers.python.layers import initializers
 
 class BiLSTM_CRF:
     def __init__(self, embedded_chars, lstm_size, cell_type, num_layers, dropout_rate,
-                 num_labels, max_seq_length, labels, lengths, is_training, crf_only=True):
+                 num_labels, max_seq_length, labels, lengths, is_training, bilstm=True, crf=True):
         """
         BLSTM-CRF 网络
         :param embedded_chars: Fine-tuning embedding input
@@ -31,7 +31,8 @@ class BiLSTM_CRF:
         self.lengths = lengths
         self.embedding_size = embedded_chars.shape[-1].value
         self.is_training = is_training
-        self.crf_only = crf_only
+        self.crf = crf
+        self.bilstm = bilstm
         self.initializer = initializers.xavier_initializer()
 
     def _construct_cell(self):
@@ -125,12 +126,22 @@ class BiLSTM_CRF:
                     transition_params=trans,
                     sequence_lengths=self.lengths)
                 return tf.reduce_mean(-log_likelihood), trans
+    
+    def softmax_layer(self, logits):
+        pred_ids = tf.argmax(logits, axis=-1)
+        pred_ids = tf.cast(pred_ids, tf.int32)
+
+        losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=self.labels)
+        mask = tf.sequence_mask(self.lengths)
+        losses = tf.boolean_mask(losses, mask)
+        loss = tf.reduce_mean(losses)
+        return pred_ids, loss
 
     def add_bilstm_crf_layer(self):
-        # if self.is_training:
-        #     self.embedded_chars = tf.nn.dropout(self.embedded_chars, self.dropout_rate)
-
-        if self.crf_only:
+        if self.is_training:
+            self.embedded_chars = tf.nn.dropout(self.embedded_chars, self.dropout_rate)
+        
+        if not self.bilstm:
             # project layer
             logits = self.project_crf_layer(self.embedded_chars)
         else:
@@ -138,11 +149,18 @@ class BiLSTM_CRF:
             lstm_output = self.bilstm_layer()
             # project layer
             logits = self.project_bilstm_layer(lstm_output)
-        # crf_layer
-        loss, trans = self.crf_layer(logits)
+            
+        if not self.crf:
+            # softmax layer
+            pred_ids, loss = self.softmax_layer(logits)
+        else:
+            # crf_layer
+            loss, trans = self.crf_layer(logits)
+            # CRF decode, pred_ids 是一条最大概率的标注路径
+            pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=self.lengths)
+        
+        return (loss, pred_ids)
+    
 
-        # CRF decode, pred_ids 是一条最大概率的标注路径
-        pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=self.lengths)
-        return (loss, logits, pred_ids)
 
 

@@ -2,8 +2,8 @@
 
 # train and eval in source domain
 # python blstm_ner.py\
-#     --data_dir=./data/ChinaDaily   \
-#     --output_dir=./output/ChinaDaily/blstm_crf/   \
+#     --data_dir=./data/MSRA   \
+#     --output_dir=./output/MSRA/blstm_crf/   \
 #     --vocab_file=./data/wiki/char2id.pkl   \
 #     --embedding_file=./data/wiki/char2vec.txt   \
 #     --embedding_source=./data/wiki/wiki_100.utf8.txt   \
@@ -16,30 +16,55 @@
 # predict in target domain
 # python blstm_ner.py\
 #     --data_dir=./data/ywsz/   \
-#     --output_dir=./output/ChinaDaily/blstm_crf/   \
+#     --output_dir=./output/MSRA/blstm_crf/   \
 #     --vocab_file=./data/wiki/char2id.pkl   \
 #     --embedding_file=./data/wiki/char2vec.txt   \
 #     --CRF=True   \
 #     --mode=predict   \
 
-# test in target domain
-# using char2vec blstm_crf
-# python blstm_ner.py\
-#     --data_dir=./data/ywevents/   \
-#     --output_dir=./output/ChinaDaily/blstm_crf/   \
-#     --vocab_file=./data/wiki/char2id.pkl   \
-#     --embedding_file=./data/wiki/char2vec.txt   \
-#     --CRF=True   \
-#     --mode=test   \
 
 # test in target domain
-# using random blstm_crf
+# using blstm
+# python blstm_ner.py\
+    # --data_dir=./data/ywevents/   \
+    # --output_dir=./output/ywevents/blstm/   \
+    # --ckpt_model=./output/MSRA/blstm/checkpoints/model.ckpt-31680   \
+    # --vocab_file=./data/wiki/char2id.pkl   \
+    # --embedding_file=./data/wiki/char2vec.txt   \
+    # --random_embedding=True   \
+    # --mode=test   \
+
+# test in target domain
+# using char2vec_blstm
+# python blstm_ner.py\
+#     --data_dir=./data/ywevents/   \
+#     --output_dir=./output/ywevents/char2vec_blstm/   \
+#     --ckpt_model=./output/MSRA/char2vec_blstm/checkpoints/model.ckpt-31680   \
+#     --vocab_file=./data/wiki/char2id.pkl   \
+#     --embedding_file=./data/wiki/char2vec.txt   \
+#     --mode=test   \
+
+
+# test in target domain
+# using blstm_crf
+# python blstm_ner.py\
+    # --data_dir=./data/ywevents/   \
+    # --output_dir=./output/ywevents/blstm_crf/   \
+    # --ckpt_model=./output/MSRA/blstm_crf/checkpoints/model.ckpt-31680   \
+    # --vocab_file=./data/wiki/char2id.pkl   \
+    # --embedding_file=./data/wiki/char2vec.txt   \
+    # --CRF=True   \
+    # --random_embedding=True   \
+    # --mode=test   \
+
+
+# test in target domain
+# using char2vec_blstm_crf
 python blstm_ner.py\
     --data_dir=./data/ywevents/   \
-    --output_dir=./output/ChinaDaily/blstm_crf_random/   \
+    --output_dir=./output/ywevents/char2vec_blstm_crf/   \
+    --ckpt_model=./output/MSRA/char2vec_blstm_crf/checkpoints/model.ckpt-30888   \
     --vocab_file=./data/wiki/char2id.pkl   \
     --embedding_file=./data/wiki/char2vec.txt   \
     --CRF=True   \
-    --random_embedding=True   \
     --mode=test   \
-

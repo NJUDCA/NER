@@ -47,7 +47,7 @@ parser.add_argument('--clip', type=float, default=5.0, help='gradient clipping')
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout keep_prob')
 parser.add_argument('--shuffle', type=bool, default=True, help='shuffle training data before each epoch')
 parser.add_argument('--mode', type=str, default='train', help='train/test/predict')
-parser.add_argument('--ckpt_model', type=str, default='model.ckpt-123', help='model for demo')
+parser.add_argument('--ckpt_model', type=str, default=None, help='model for demo')
 parser.add_argument('--raw_input', type=bool, default=False, help='input text from console. If false, from file')
 args = parser.parse_args()
 
@@ -97,15 +97,14 @@ def main():
     elif args.mode == 'test':
         test_data = read_corpus(os.path.join(args.data_dir, 'dev.txt'))
         logging.info('{} test examples'.format(len(test_data)))
-
-        ckpt_file = args.ckpt_model if os.path.exists(args.ckpt_model) else tf.train.latest_checkpoint(model_path)
+        ckpt_file = args.ckpt_model if args.ckpt_model else tf.train.latest_checkpoint(model_path)
         logging.info('trained checkpoint file: {}'.format(ckpt_file))
         paths['model_path'] = ckpt_file
         model = BiLSTM_CRF(args, embeddings, tag2label, word2id, paths)
         model.build_graph()
         model.test(test_data)
     elif args.mode == 'predict':
-        ckpt_file = args.ckpt_model if os.path.exists(args.ckpt_model) else tf.train.latest_checkpoint(model_path)
+        ckpt_file = args.ckpt_model if args.ckpt_model else tf.train.latest_checkpoint(model_path)
         logging.info('trained checkpoint file: {}'.format(ckpt_file))
         paths['model_path'] = ckpt_file
         model = BiLSTM_CRF(args, embeddings, tag2label, word2id, paths)
