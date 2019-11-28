@@ -73,10 +73,10 @@ flags.DEFINE_integer("predict_batch_size", 8,
 flags.DEFINE_float("learning_rate", 5e-5,
                    "The initial learning rate for Adam.")
 
-flags.DEFINE_float("dropout_rate", 0.1,
-                   "The initial learning rate for Adam.")
+flags.DEFINE_float("dropout_rate", None,
+                   "The rate to dropout cells in embedding layer.")
 
-flags.DEFINE_integer("save_checkpoints_steps", 1000,
+flags.DEFINE_integer("save_checkpoints_steps", 1583,
                      "How often to save the model checkpoint.")
 
 flags.DEFINE_integer("iterations_per_loop", 1000,
@@ -113,10 +113,10 @@ flags.DEFINE_integer("num_tpu_cores", 8,
                      "Only used if `use_tpu` is True. Total number of TPU cores to use.")
 
 flags.DEFINE_bool("bilstm", True,
-                  "use bilstm + crf.")
+                  "use bilstm.")
 
-flags.DEFINE_bool("crf_only", False,
-                  "use crf only.")
+flags.DEFINE_bool("crf", True,
+                  "use crf.")
 
 # lstm params
 flags.DEFINE_integer('lstm_size', 128,
@@ -449,28 +449,27 @@ def create_model(bert_config, is_training, input_ids, input_mask,
     # use model.get_sequence_output() to get token-level output
     output_layer = model.get_sequence_output()
 
-    if is_training:
-        output_layer = tf.nn.dropout(output_layer, FLAGS.dropout_rate)
-
-    if FLAGS.bilstm:
+    if FLAGS.bilstm or FLAGS.crf:
         '''
         used = tf.sign(tf.abs(input_ids))
         lengths = tf.reduce_sum(used, reduction_indices=1)
         '''
-        # [batch_size] 大小的向量，包含了当前batch中的序列长度
+        # [batch_size] 大小的向量，包含了当前batch中的序列长度  
         lengths = tf.reduce_sum(input_mask, axis=1)
         max_seq_length = output_layer.shape[1].value
 
-        bilstm_crf = BiLSTM_CRF(embedded_chars=output_layer, lstm_size=FLAGS.lstm_size, cell_type=FLAGS.cell, num_layers=FLAGS.num_layers,
+        bilstm_crf = BiLSTM_CRF(embedded_chars=output_layer, lstm_size=FLAGS.lstm_size, cell_type=FLAGS.cell, num_layers=FLAGS.num_layers, 
                                 dropout_rate=FLAGS.dropout_rate, num_labels=num_labels, max_seq_length=max_seq_length, labels=labels,
-                                lengths=lengths, is_training=is_training, crf_only=FLAGS.crf_only)
-        loss, logits, predict = bilstm_crf.add_bilstm_crf_layer()
+                                lengths=lengths, is_training=is_training, bilstm=FLAGS.bilstm, crf=FLAGS.crf)
+        loss, predict = bilstm_crf.add_bilstm_crf_layer()
     else:
+        if is_training:
+            output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
         logits = hidden2tag(output_layer, num_labels)
         logits = tf.reshape(logits, [-1, FLAGS.max_seq_length, num_labels])
         loss, predict = softmax_layer(logits, labels, num_labels, input_mask)
-
-    return (loss, logits, predict)
+    
+    return (loss, predict)
 
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
@@ -485,7 +484,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         label_ids = features["label_ids"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
-        (total_loss, logits, pred_ids) = create_model(
+        (total_loss, pred_ids) = create_model(
             bert_config, is_training, input_ids, input_mask, segment_ids,
             label_ids, num_labels, use_one_hot_embeddings)
 

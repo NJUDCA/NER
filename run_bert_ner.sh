@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
 
 # # source domain
-# python bert_ner.py\
-#     --do_lower_case=False \
-#     --do_train=True   \
-#     --do_eval=True   \
-#     --do_test=True \
-#     --data_dir=./data/MSRA   \
-#     --vocab_file=chinese_L-12_H-768_A-12/vocab.txt  \
-#     --bert_config_file=chinese_L-12_H-768_A-12/bert_config.json \
-#     --init_checkpoint=chinese_L-12_H-768_A-12/bert_model.ckpt   \
-#     --max_seq_length=128   \
-#     --train_batch_size=32   \
-#     --learning_rate=2e-5   \
-#     --num_train_epochs=4.0   \
-#     --output_dir=./output/MSRA/bert_crf/   \
-#     --bilstm=True   \
-#     --crf_only=True
+python bert_ner.py
+    --do_lower_case=False \
+    --do_train=True   \
+    --do_eval=True   \
+    --do_test=True \
+    --data_dir=./data/MSRA/   \
+    --vocab_file=data/vocab.txt   \
+    --bert_config_file=chinese_L-12_H-768_A-12/bert_config.json   \
+    --init_checkpoint=chinese_L-12_H-768_A-12/bert_model.ckpt   \
+    --max_seq_length=128   \
+    --train_batch_size=32   \
+    --learning_rate=2e-5   \
+    --num_train_epochs=10.0   \
+    --dropout_rate=0.5   \
+    --output_dir=./output/MSRA/bert_bilstm_crf/   \
+    --bilstm=True   \
+    --crf=True
 
 # target domain
 # using bert
@@ -35,7 +36,7 @@
 #     --num_train_epochs=3.0   \
 #     --output_dir=./output/ywevents/bert/   \
 #     --bilstm=False   \
-#     --crf_only=False   \
+#     --crf=False   \
 
 # using bert-crf
 # python bert_ner.py\
@@ -52,11 +53,11 @@
 #     --learning_rate=2e-5   \
 #     --num_train_epochs=4.0   \
 #     --output_dir=./output/ywevents/bert_crf/   \
-#     --bilstm=True   \
-#     --crf=False   \
+#     --bilstm=False   \
+#     --crf=True   \
 
-# using bert-bi-lstm-crf
-epoch=6
+# using bert-bi-lstm
+epoch=1
 while [ $epoch -le 10 ]
 do
     let checkpoint=`expr $epoch \* 1583`

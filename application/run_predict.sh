@@ -10,8 +10,8 @@ python predict_bert.py\
     --max_seq_length=128   \
     --train_batch_size=32   \
     --learning_rate=2e-5   \
-    --output_dir=../output/ChinaDaily/bert_crf/   \
-    --bilstm=True   \
-    --crf_only=True   \
+    --output_dir=../output/MSRA/bert_crf/   \
+    --bilstm=False   \
+    --crf=True   \
     --raw_input=False   \
     # --file_input=events.txt
