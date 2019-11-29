@@ -72,7 +72,7 @@ learning_rate一般通过指数衰减调参，学习率决定了参数每次更�
 
 batch_size一般从128开始上下浮动。一个batch即批训练一次神经网络, 计算损失函数, 利用梯度下降更新网络参数。batch越大其越能代表整个数据集的分布, 但越大也意味着计算量越大, 收敛越慢。
 
-注意,由于LSTM的遗忘机制，在训练时dropout要设置得大一点，一般取0.5。
+注意，由于LSTM的遗忘机制，在训练时dropout要设置得大一点，一般取0.5。
 
 
 ### BERT
@@ -98,7 +98,7 @@ return ["X",  "B-LOC",  "I-LOC",  "B-PER",  "I-PER",  "B-ORG",  "I-ORG",  "O",  
 - Anaconda (recommended on Windows)
 
 ### 注意
-- 在CPU上运行可能会卡机, 模型训练耗时约day+
+- BERT在CPU上运行可能会卡机, 模型训练耗时约day+
 - [Google Colab](https://colab.research.google.com) 提供了免费的GPU, 需要科学上网
 - 由于Git托管体积大的文件不方便，相关的训练集、词向量、预训练模型、下游任务训练模型已上传到网盘
 
