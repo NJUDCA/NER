@@ -136,6 +136,8 @@ python bert_ner.py
     --crf=True
 ```
 
+由于训练样本大，只需训练4-5个epoch就能达到不错的效果，再多有点过拟合。
+
 2. BiLSTM / BiLSTM + CRF
 ```bash
 bash run_bilstm_ner.sh
