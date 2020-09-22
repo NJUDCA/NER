@@ -678,12 +678,14 @@ if __name__ == "__main__":
     flags.mark_flag_as_required("vocab_file")
     flags.mark_flag_as_required("bert_config_file")
     flags.mark_flag_as_required("output_dir")
+    if not os.path.exists(FLAGS.output_dir):
+        tf.gfile.MakeDirs(FLAGS.output_dir)
     LOG_SETTINGS = {
         'format': '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
         'datefmt': '%Y-%m-%d %H:%M:%S',
     }
     selected_model = FLAGS.output_dir.strip().split('/')[-2]
-    FILE_NAME = os.path.join(FLAGS.data_dir, 'predict_{}.log'.format(selected_model))
+    FILE_NAME = os.path.join(FLAGS.output_dir, 'predict_{}.log'.format(selected_model))
     logging.basicConfig(
         handlers=[logging.FileHandler(FILE_NAME, encoding="utf-8", mode='a')],
         level=logging.INFO,
